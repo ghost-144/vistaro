@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vistaro · TV preview</title>
+  <style>
+    :root{color-scheme:dark;--bg:#101112;--panel:#1c1e20;--panel2:#252729;--text:#f0eef2;--muted:#a8a7ad;--accent:#c8c1d8;--line:#ffffff1c}
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif}body{font-size:clamp(14px,1.1vw,21px)}
+    .app{height:100%;display:grid;grid-template-columns:112px 1fr;background:radial-gradient(ellipse at 65% 8%,#27242c 0,transparent 42%),var(--bg)}
+    aside{z-index:2;display:flex;flex-direction:column;align-items:center;gap:14px;padding:28px 12px;border-right:1px solid #ffffff0d;background:#111214e8}
+    .brand{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;margin-bottom:36px;background:linear-gradient(145deg,#d3cce3,#8f85a6);color:#17151c;font-size:26px;font-weight:900;box-shadow:0 8px 30px #c8c1d822}
+    .nav{width:76px;min-height:70px;border:1px solid transparent;background:transparent;color:#929198;border-radius:18px;display:flex;flex-direction:column;gap:4px;justify-content:center;align-items:center;cursor:pointer;font:inherit;font-size:12px;transition:.18s}
+    .nav .ico{font-size:23px;line-height:1}.nav.active{background:#c8c1d824;color:var(--accent)}.nav:focus-visible,.nav:hover{outline:2px solid var(--accent);color:var(--text);background:#ffffff12}
+    .profile{margin-top:auto;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#38333f;color:var(--accent);font-weight:700}
+    main{min-width:0;overflow:auto;scrollbar-width:none;padding:0 4.4vw 48px}main::-webkit-scrollbar{display:none}
+    .top{height:76px;display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:14px}.top .logo{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:#b6b2bd}.top .right{display:flex;gap:25px;align-items:center}.live{display:flex;align-items:center;gap:8px}.dot{width:8px;height:8px;background:#91caab;border-radius:50%;box-shadow:0 0 10px #91caab88}
+    .hero{height:min(41vh,400px);min-height:280px;position:relative;overflow:hidden;border:1px solid #ffffff12;border-radius:24px;background:linear-gradient(90deg,#0d0e10 0%,#17151aeb 36%,#1c1721aa 68%,#14131655 100%),radial-gradient(ellipse at 78% 36%,#755a69 0,#392c3d 23%,#1e2026 54%,#111214 78%);box-shadow:0 22px 70px #0008}
+    .hero:before{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#111214 0%,transparent 55%),repeating-linear-gradient(120deg,transparent 0 80px,#ffffff03 81px 83px)}
+    .hero-art{position:absolute;right:7%;top:4%;height:112%;width:37%;opacity:.72;filter:drop-shadow(0 8px 32px #0009);background:radial-gradient(ellipse at 50% 30%,#c3a5a4 0 5%,#705c68 6% 17%,transparent 18%),linear-gradient(110deg,transparent 25%,#2b252b 26% 38%,#51404b 39% 55%,#211f25 56% 70%,transparent 71%);clip-path:polygon(42% 0,76% 4%,90% 27%,100% 100%,9% 100%,0 36%)}
+    .hero-content{position:absolute;left:5%;bottom:10%;max-width:50%}.eyebrow{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);font-weight:700}.hero h1{font-family:Georgia,serif;font-size:clamp(38px,4.8vw,78px);line-height:.98;letter-spacing:-.04em;margin:14px 0 12px}.hero p{font-size:15px;line-height:1.55;color:#d0cdd2;max-width:520px;margin:0 0 20px}.meta{display:flex;gap:12px;align-items:center;color:#d0cdd2;font-size:13px;margin-bottom:20px}.pill{border:1px solid #ffffff35;padding:4px 9px;border-radius:6px}.actions{display:flex;gap:11px}.action{border:1px solid #ffffff3b;background:#ffffff10;color:var(--text);height:42px;padding:0 18px;border-radius:10px;font:600 14px inherit;cursor:pointer}.action.primary{background:var(--accent);color:#201d26;border-color:var(--accent)}.action:hover,.action:focus-visible{outline:2px solid white;transform:scale(1.03)}
+    .section{margin-top:30px}.section-head{display:flex;align-items:center;justify-content:space-between;margin:0 2px 13px}.section h2{font-size:20px;margin:0;font-weight:650;letter-spacing:-.02em}.section-head button{border:0;background:none;color:var(--muted);font:inherit;font-size:12px;cursor:pointer}.section-head button:hover{color:var(--text)}
+    .rail{display:flex;gap:15px;overflow-x:auto;padding:4px 3px 12px;scrollbar-width:none}.rail::-webkit-scrollbar{display:none}.card{position:relative;flex:0 0 clamp(130px,12.2vw,205px);aspect-ratio:.72;border:1px solid #ffffff1a;border-radius:13px;overflow:hidden;background:var(--poster);cursor:pointer;transition:transform .18s,outline .18s}.card:before{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#090a0c 0%,#0b0c0d19 57%,#ffffff05)}.card:hover,.card:focus-visible{outline:3px solid var(--accent);outline-offset:1px;transform:scale(1.045);z-index:1}.poster-glow{position:absolute;inset:10% 12% 34%;border-radius:48% 48% 35% 35%;background:radial-gradient(ellipse at 50% 35%,var(--glow),transparent 65%);filter:blur(5px);opacity:.85}.poster-shape{position:absolute;left:25%;right:25%;top:19%;height:54%;border-radius:46% 46% 20% 20%;background:linear-gradient(115deg,#ffffff28,#00000050 47%,#ffffff10),var(--figure);box-shadow:0 12px 35px #0008}.poster-title{position:absolute;left:12px;right:12px;bottom:14px;text-shadow:0 2px 8px #000;font-family:Georgia,serif;font-size:clamp(17px,1.7vw,25px);line-height:1.02;font-weight:700}.poster-kicker{display:block;font:700 9px/1.2 Inter,"Segoe UI",sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#e4d7cb;margin-bottom:7px}.continue{display:flex;align-items:center;gap:15px;background:linear-gradient(100deg,#232126,#1c1d20);border:1px solid #ffffff12;border-radius:14px;padding:14px 18px;min-width:260px;flex:0 0 31%;cursor:pointer}.continue:hover,.continue:focus-visible{outline:2px solid var(--accent)}.play{width:46px;height:46px;display:grid;place-items:center;border-radius:50%;background:var(--accent);color:#1c1921;font-size:19px}.continue b{font-size:14px}.continue small{display:block;color:var(--muted);font-size:11px;margin-top:5px}.progress{height:3px;background:#ffffff24;margin-top:9px;border-radius:4px}.progress i{display:block;width:42%;height:100%;background:var(--accent);border-radius:4px}
+    .toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,20px);opacity:0;background:#e9e4f0;color:#211e25;padding:12px 20px;border-radius:12px;font-size:13px;transition:.2s;pointer-events:none}.toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(max-width:780px){.app{grid-template-columns:76px 1fr}aside{padding:18px 6px}.nav{width:60px}.brand{width:42px;height:42px;margin-bottom:18px}main{padding-left:22px;padding-right:22px}.hero-content{max-width:75%}.hero-art{right:-2%;width:48%;opacity:.42}.hero p{font-size:13px}.section h2{font-size:17px}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside aria-label="Main navigation">
+      <div class="brand">V</div>
+      <button class="nav active" data-page="Home"><span class="ico">⌂</span>Home</button>
+      <button class="nav" data-page="Movies"><span class="ico">▣</span>Movies</button>
+      <button class="nav" data-page="TV Shows"><span class="ico">▤</span>TV Shows</button>
+      <button class="nav" data-page="Search"><span class="ico">⌕</span>Search</button>
+      <button class="nav" data-page="Settings"><span class="ico">⚙</span>Settings</button>
+      <div class="profile">S</div>
+    </aside>
+    <main>
+      <header class="top"><span class="logo">Vistaro · TV</span><div class="right"><span class="live"><i class="dot"></i>Catalog ready</span><span>Friday, October 9</span></div></header>
+      <section class="hero" aria-label="Featured series">
+        <div class="hero-art"></div>
+        <div class="hero-content"><div class="eyebrow">Featured series</div><h1>Peaky<br>Blinders</h1><div class="meta"><span>2013</span><span class="pill">TV-MA</span><span>6 seasons</span><span>★ 8.5</span></div><p>A fearless gang rises through the streets of post-war Birmingham. Follow the Shelby family in this acclaimed crime drama.</p><div class="actions"><button class="action primary" data-toast="Starting Peaky Blinders preview">▶ &nbsp; Play</button><button class="action" data-toast="Added to My List">＋ &nbsp; My List</button><button class="action" data-toast="TMDB ID 60574 · Available in VidAPI">ⓘ &nbsp; Details</button></div></div>
+      </section>
+      <section class="section"><div class="section-head"><h2>Continue Watching</h2><button>View all &nbsp;›</button></div><div class="rail">
+        <div class="continue" tabindex="0"><div class="play">▶</div><div><b>Breaking Bad</b><small>S1 E2 · 23 min left</small><div class="progress"><i></i></div></div></div>
+        <div class="continue" tabindex="0"><div class="play">▶</div><div><b>Planet Earth</b><small>S1 E4 · 18 min left</small><div class="progress"><i style="width:68%"></i></div></div></div>
+        <div class="continue" tabindex="0"><div class="play">▶</div><div><b>The Last of Us</b><small>S1 E1 · 31 min left</small><div class="progress"><i style="width:24%"></i></div></div></div>
+      </div></section>
+      <section class="section"><div class="section-head"><h2>Latest Movies</h2><button>View all &nbsp;›</button></div><div class="rail" id="movies"></div></section>
+      <section class="section"><div class="section-head"><h2>Latest TV Shows</h2><button>View all &nbsp;›</button></div><div class="rail" id="shows"></div></section>
+    </main>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script>
+    const movies=[['Dune: Part Two','Sci-fi · 2024','#b88a61','#413329'],['The Batman','Action · 2022','#a94232','#29272b'],['Oppenheimer','Drama · 2023','#ce7745','#40302c'],['Interstellar','Sci-fi · 2014','#667f94','#263644'],['The Grand Budapest Hotel','Comedy · 2014','#c99a9a','#51414b'],['Poor Things','Fantasy · 2023','#6697a0','#263b3d']];
+    const shows=[['Peaky Blinders','Crime · 2013','#c4a4a0','#403238'],['The Last of Us','Drama · 2023','#738461','#2d382c'],['House of the Dragon','Fantasy · 2022','#be6d52','#4c2c2b'],['Severance','Thriller · 2022','#a9afb4','#3d454b'],['The Bear','Drama · 2022','#d79055','#563b29'],['Dark','Mystery · 2017','#627387','#2b3441']];
+    function fillRail(id,items){document.getElementById(id).innerHTML=items.map(([title,meta,glow,figure],i)=>`<article class="card" tabindex="0" aria-label="${title}, ${meta}" style="--poster:linear-gradient(155deg,${glow}22,transparent 48%),linear-gradient(0deg,#101113,${figure});--glow:${glow};--figure:${figure}"><div class="poster-glow"></div><div class="poster-shape" style="transform:translateX(${i%2?'-4px':'4px'}) rotate(${i%2?'-3':'3'}deg)"></div><div class="poster-title"><span class="poster-kicker">${meta}</span>${title}</div></article>`).join('')}
+    fillRail('movies',movies);fillRail('shows',shows);
+    const toast=document.getElementById('toast');let timer;document.querySelectorAll('[data-toast]').forEach(b=>b.onclick=()=>{toast.textContent=b.dataset.toast;toast.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>toast.classList.remove('show'),1800)});
+    document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(n=>n.classList.remove('active'));b.classList.add('active');toast.textContent=b.dataset.page+' preview';toast.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>toast.classList.remove('show'),1400)});
+    document.addEventListener('keydown',e=>{if(!['ArrowDown','ArrowUp','ArrowLeft','ArrowRight','Enter'].includes(e.key))return;const el=document.activeElement;if(e.key==='Enter'&&el?.matches('.card,.continue')){toast.textContent=el.getAttribute('aria-label')||el.innerText.replace(/\s+/g,' ').trim();toast.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>toast.classList.remove('show'),1600);return}if(['ArrowDown','ArrowUp','ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();const all=[...document.querySelectorAll('button,.card,.continue')],idx=all.indexOf(el);if(idx<0){all[0]?.focus();return}let delta=e.key==='ArrowDown'?4:e.key==='ArrowUp'?-4:e.key==='ArrowRight'?1:-1;all[(idx+delta+all.length)%all.length]?.focus()}});
+  </script>
+</body>
+</html>
