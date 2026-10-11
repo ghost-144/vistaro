@@ -216,7 +216,40 @@ class CatalogIngestJob:
         signal.signal(signal.SIGINT, self._handle_interrupt)
         signal.signal(signal.SIGTERM, self._handle_interrupt)
 
+        self._verify_connections()
         self._ensure_indexes()
+
+    def _verify_connections(self):
+        """Pre-flight check for MongoDB Atlas and TMDB API connectivity with diagnostic logs."""
+        logger.info("=========================================")
+        logger.info(" PRE-FLIGHT CONNECTION CHECKS")
+        logger.info("=========================================")
+
+        # 1. Check TMDB API
+        logger.info("Testing TMDB API connection...")
+        try:
+            tmdb_check = self.tmdb._get("/configuration")
+            if tmdb_check and "images" in tmdb_check:
+                logger.info(" [OK] TMDB API connected successfully (base_url: %s)", tmdb_check["images"].get("secure_base_url"))
+            else:
+                raise ConnectionError("TMDB returned unexpected response or authorization failed.")
+        except Exception as e:
+            logger.error(" [FAIL] TMDB API connection failed: %s", e)
+            raise SystemExit(1)
+
+        # 2. Check MongoDB Atlas
+        logger.info("Testing MongoDB Atlas connection...")
+        try:
+            ping_res = self.db.command("ping")
+            server_info = self.mongo_client.server_info()
+            version = server_info.get("version", "unknown")
+            logger.info(" [OK] MongoDB Atlas connected successfully (version: %s, ping: %s)", version, ping_res.get("ok"))
+        except Exception as e:
+            logger.error(" [FAIL] MongoDB Atlas connection failed: %s", e)
+            logger.error("Hint: Check MONGODB_URI secret and verify MongoDB Atlas Network Access IP whitelist (allow 0.0.0.0/0 for GitHub Actions).")
+            raise SystemExit(1)
+
+        logger.info("=========================================")
 
     def _handle_interrupt(self, signum, frame):
         logger.warning("\nInterrupt received! Finalizing batch and saving checkpoint before exit...")
