@@ -14,6 +14,14 @@ import retrofit2.http.Query
 import java.util.concurrent.TimeUnit
 
 interface TmdbApi {
+    @GET("trending/{media_type}/{time_window}")
+    suspend fun trending(
+        @Path("media_type") mediaType: String = "all",
+        @Path("time_window") timeWindow: String = "day",
+        @Query("page") page: Int = 1,
+        @Query("language") language: String = "en-US",
+    ): TmdbPage<TmdbTrendingDto>
+
     @GET("movie/popular")
     suspend fun popularMovies(@Query("page") page: Int = 1, @Query("language") language: String = "en-US"): TmdbPage<TmdbMovieDto>
 
@@ -121,6 +129,20 @@ data class TmdbTvDto(
     @SerialName("number_of_seasons") val numberOfSeasons: Int = 0,
     @SerialName("number_of_episodes") val numberOfEpisodes: Int = 0,
     @SerialName("imdb_id") val imdbId: String? = null,
+)
+
+@Serializable
+data class TmdbTrendingDto(
+    val id: Int = 0,
+    val title: String? = null,
+    val name: String? = null,
+    @SerialName("media_type") val mediaType: String? = null,
+    val overview: String = "",
+    @SerialName("release_date") val releaseDate: String? = null,
+    @SerialName("first_air_date") val firstAirDate: String? = null,
+    @SerialName("vote_average") val voteAverage: Double? = null,
+    @SerialName("poster_path") val posterPath: String? = null,
+    @SerialName("backdrop_path") val backdropPath: String? = null,
 )
 
 @Serializable

@@ -7,8 +7,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.TlsVersion
 import java.io.IOException
 
 enum class CatalogContentType(val key: String, val fileName: String) {
@@ -18,7 +20,7 @@ enum class CatalogContentType(val key: String, val fileName: String) {
 
 /** Streams VidAPI's daily ID exports into SQLite; it never holds the full ID list in memory. */
 class VidApiIdSource(
-    private val httpClient: OkHttpClient = OkHttpClient(),
+    private val httpClient: OkHttpClient = defaultHttpClient(),
     private val baseUrl: String = "https://vidapi.ru/ids/",
 ) {
     suspend fun syncIds(
@@ -67,5 +69,14 @@ class VidApiIdSource(
 
     companion object {
         private const val BATCH_SIZE = 500
+
+        fun defaultHttpClient(): OkHttpClient {
+            val tls12Spec = ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
+                .tlsVersions(TlsVersion.TLS_1_2)
+                .build()
+            return OkHttpClient.Builder()
+                .connectionSpecs(listOf(tls12Spec, ConnectionSpec.COMPATIBLE_TLS, ConnectionSpec.CLEARTEXT))
+                .build()
+        }
     }
 }

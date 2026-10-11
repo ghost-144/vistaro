@@ -40,6 +40,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
@@ -62,13 +63,19 @@ import com.vistaro.app.data.tmdb.tmdbImageUrl
 import kotlinx.coroutines.flow.collect
 
 internal object TvPalette {
-    val background = Color(0xFF191A1B)
-    val surface = Color(0xFF222425)
-    val surfaceFocused = Color(0xFF303234)
-    val text = Color(0xFFE5E5E8)
-    val muted = Color(0xFFA8A9AD)
-    val focus = Color(0xFFF1EFF4)
-    val accent = Color(0xFFC8C1D8)
+    val background = Color(0xFF0A0C10)
+    val surface = Color(0xFF121620)
+    val surfaceLight = Color(0xFF1A2130)
+    val surfaceFocused = Color(0xFF1E283C)
+    val text = Color(0xFFF3F4F6)
+    val muted = Color(0xFF9CA3AF)
+    val focus = Color(0xFF60A5FA)
+    val accent = Color(0xFF3B82F6)
+    val accentHover = Color(0xFF2563EB)
+    val accentGlow = Color(0x593B82F6)
+    val ratingGold = Color(0xFFFBBF24)
+    val cardBorder = Color(0x14FFFFFF)
+    val badgeBg = Color(0xD90A0C10)
 }
 
 private data class TvFeedSpec(
@@ -80,6 +87,138 @@ private data class TvFeedSpec(
 )
 
 @Composable
+internal fun HeroSpotlightBanner(
+    item: CatalogItem,
+    tag: String = "SPOTLIGHT FEATURE",
+    overview: String = "Watch the highest rated trending content streaming now in high definition.",
+    compactLayout: Boolean = false,
+    onWatch: () -> Unit,
+) {
+    AppClickableSurface(
+        onClick = onWatch,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(if (compactLayout) 220.dp else 340.dp),
+        shape = RoundedCornerShape(14.dp),
+        containerColor = TvPalette.surface,
+        borderStroke = BorderStroke(1.dp, TvPalette.cardBorder),
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            val backdropUrl = tmdbImageUrl(item.posterPath, "w780")
+            if (backdropUrl != null) {
+                AsyncImage(
+                    model = backdropUrl,
+                    contentDescription = "${item.title} backdrop",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0x330A0C10),
+                                Color(0x880A0C10),
+                                Color(0xF20A0C10),
+                            ),
+                        )
+                    )
+            )
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(if (compactLayout) 16.dp else 32.dp),
+                verticalArrangement = Arrangement.Bottom,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(TvPalette.accent)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = tag,
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp,
+                    )
+                }
+                Text(
+                    text = item.title,
+                    modifier = Modifier.padding(top = 8.dp),
+                    color = TvPalette.text,
+                    fontSize = if (compactLayout) 22.sp else 32.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Row(
+                    modifier = Modifier.padding(top = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = item.year ?: "2024",
+                        color = TvPalette.muted,
+                        fontSize = 13.sp,
+                    )
+                    Text(
+                        text = "•",
+                        color = TvPalette.muted,
+                        fontSize = 12.sp,
+                    )
+                    Text(
+                        text = if (item.type == MediaType.MOVIE) "Movie" else "Series",
+                        color = TvPalette.muted,
+                        fontSize = 13.sp,
+                    )
+                    if (item.rating != null && item.rating > 0.0) {
+                        Text(
+                            text = "•",
+                            color = TvPalette.muted,
+                            fontSize = 12.sp,
+                        )
+                        Text(
+                            text = "★ ${"%.1f".format(item.rating)} TMDB",
+                            color = TvPalette.ratingGold,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+                if (!compactLayout) {
+                    Text(
+                        text = overview,
+                        modifier = Modifier.padding(top = 8.dp),
+                        color = Color(0xFFD1D5DB),
+                        fontSize = 14.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .padding(top = 14.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(TvPalette.accent)
+                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        text = "▶  Watch Now",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 internal fun TvHomeBrowseScreen(
     tmdbRepository: TmdbRepository,
     continueItems: List<ContinueWatchingItem>,
@@ -89,14 +228,40 @@ internal fun TvHomeBrowseScreen(
     onViewAll: (MediaType, CatalogSort, Int?, String) -> Unit,
     compactLayout: Boolean = false,
 ) {
+    var heroItem by remember { mutableStateOf<CatalogItem?>(null) }
+    LaunchedEffect(tmdbRepository) {
+        val result = tmdbRepository.fetchBrowsePage(MediaType.MOVIE, CatalogSort.POPULAR, 1)
+        if (result.items.isNotEmpty()) {
+            heroItem = result.items.first()
+        }
+    }
+
     val sidePadding = if (compactLayout) 16.dp else 48.dp
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = sidePadding, end = sidePadding, top = 20.dp, bottom = 44.dp),
         verticalArrangement = Arrangement.spacedBy(25.dp),
     ) {
+        heroItem?.let { hero ->
+            item {
+                HeroSpotlightBanner(
+                    item = hero,
+                    tag = "PREMIERE SPOTLIGHT",
+                    compactLayout = compactLayout,
+                    onWatch = { onMovie(hero.tmdbId) },
+                )
+            }
+        }
         item {
             TvContinueBrowseRow(continueItems, compactLayout, onContinue)
+        }
+        item {
+            TvTrendingRow(
+                repository = tmdbRepository,
+                onItem = { item ->
+                    if (item.type == MediaType.MOVIE) onMovie(item.tmdbId) else onShow(item.tmdbId)
+                },
+            )
         }
         item {
             TvBrowseRow(
@@ -118,6 +283,82 @@ internal fun TvHomeBrowseScreen(
 }
 
 @Composable
+private fun TvTrendingRow(
+    repository: TmdbRepository,
+    onItem: (CatalogItem) -> Unit,
+) {
+    var items by remember { mutableStateOf<List<CatalogItem>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var retry by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(repository, retry) {
+        loading = true
+        error = null
+        val result = repository.fetchTrending("day")
+        if (result.error != null) {
+            error = result.error
+        } else {
+            items = result.items.take(20)
+        }
+        loading = false
+    }
+
+    if (items.isNotEmpty() || loading || error != null) {
+        Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(bottom = 10.dp),
+            ) {
+                Text(
+                    text = "Trending Today",
+                    color = TvPalette.text,
+                    fontSize = 21.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-0.3).sp,
+                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color(0x33EF4444))
+                        .border(1.dp, Color(0x66EF4444), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "HOT",
+                        color = Color(0xFFF87171),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
+            }
+
+            LazyRow(
+                state = rememberLazyListState(initialFirstVisibleItemIndex = 0),
+                reverseLayout = false,
+                modifier = Modifier.fillMaxWidth().focusGroup(),
+                horizontalArrangement = Arrangement.spacedBy(15.dp),
+                contentPadding = PaddingValues(start = 3.dp, end = 3.dp, top = 4.dp, bottom = 8.dp),
+            ) {
+                items(items, key = { "trending-${it.type}:${it.tmdbId}" }) { item ->
+                    TvMediaTile(item, onClick = { onItem(item) })
+                }
+            }
+            if (loading) {
+                Text("Loading trending titles…", modifier = Modifier.padding(top = 3.dp), color = TvPalette.muted, fontSize = 14.sp)
+            }
+            if (error != null) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(error.orEmpty(), color = TvPalette.muted, fontSize = 14.sp)
+                    Surface(onClick = { retry++ }) { Text("Retry", modifier = Modifier.padding(horizontal = 15.dp, vertical = 8.dp)) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 internal fun TvMediaBrowseScreen(
     type: MediaType,
     repository: TmdbRepository,
@@ -128,12 +369,30 @@ internal fun TvMediaBrowseScreen(
     compactLayout: Boolean = false,
 ) {
     val label = if (type == MediaType.MOVIE) "Movies" else "TV Shows"
+    var heroItem by remember(type) { mutableStateOf<CatalogItem?>(null) }
+    LaunchedEffect(type, repository) {
+        val result = repository.fetchBrowsePage(type, CatalogSort.TOP, 1)
+        if (result.items.isNotEmpty()) {
+            heroItem = result.items.first()
+        }
+    }
+
     val sidePadding = if (compactLayout) 16.dp else 48.dp
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = sidePadding, end = sidePadding, top = 20.dp, bottom = 44.dp),
         verticalArrangement = Arrangement.spacedBy(25.dp),
     ) {
+        heroItem?.let { hero ->
+            item {
+                HeroSpotlightBanner(
+                    item = hero,
+                    tag = if (type == MediaType.MOVIE) "FEATURED MOVIE" else "SPOTLIGHT SERIES",
+                    compactLayout = compactLayout,
+                    onWatch = { onItem(hero) },
+                )
+            }
+        }
         item {
             TvBrowseRow(
                 spec = TvFeedSpec("Latest $label", type, CatalogSort.LATEST),
@@ -429,13 +688,43 @@ private fun TvGenreRow(
 private fun TvGenreCard(genre: CatalogGenre, compactLayout: Boolean = false, onClick: () -> Unit) {
     AppClickableSurface(
         onClick = onClick,
-        modifier = Modifier.width(if (compactLayout) 150.dp else 205.dp).height(112.dp),
-        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier
+            .width(if (compactLayout) 150.dp else 210.dp)
+            .height(if (compactLayout) 85.dp else 110.dp),
+        shape = RoundedCornerShape(10.dp),
         containerColor = TvPalette.surface,
-        borderStroke = BorderStroke(1.dp, Color(0xFF343638)),
+        borderStroke = BorderStroke(1.dp, TvPalette.cardBorder),
     ) {
-        Box(Modifier.fillMaxSize().padding(horizontal = 18.dp), contentAlignment = Alignment.CenterStart) {
-            Text(genre.name, color = TvPalette.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(TvPalette.surfaceLight, TvPalette.surface)
+                    )
+                )
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = "▦",
+                    color = TvPalette.accent,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = genre.name,
+                    color = TvPalette.text,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
@@ -444,29 +733,94 @@ private fun TvGenreCard(genre: CatalogGenre, compactLayout: Boolean = false, onC
 internal fun TvMediaTile(item: CatalogItem, onClick: () -> Unit) {
     AppClickableSurface(
         onClick = onClick,
-        modifier = Modifier.width(174.dp).height(326.dp),
-        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier
+            .width(190.dp)
+            .height(340.dp),
+        shape = RoundedCornerShape(10.dp),
         containerColor = TvPalette.surface,
-        borderStroke = BorderStroke(1.dp, Color(0xFF343638)),
+        borderStroke = BorderStroke(1.dp, TvPalette.cardBorder),
     ) {
         Column(Modifier.fillMaxSize()) {
             Box(
-                Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(topStart = 7.dp, topEnd = 7.dp)).background(Color(0xFF2A2C2E)),
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(2f / 3f)
+                    .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
+                    .background(TvPalette.surfaceLight),
                 contentAlignment = Alignment.Center,
             ) {
                 val imageUrl = tmdbImageUrl(item.posterPath, "w342")
                 if (imageUrl != null) {
-                    AsyncImage(imageUrl, contentDescription = "${item.title} poster", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = "${item.title} poster",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
                 } else {
-                    Text("No poster", color = TvPalette.muted, fontSize = 14.sp)
+                    Text("No poster", color = TvPalette.muted, fontSize = 13.sp)
+                }
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(TvPalette.badgeBg)
+                        .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = if (item.type == MediaType.MOVIE) "MOVIE" else "SERIES",
+                        color = Color(0xFFE5E7EB),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp,
+                    )
                 }
             }
-            Column(Modifier.fillMaxWidth().height(88.dp).padding(horizontal = 11.dp, vertical = 8.dp)) {
-                Text(item.title, color = TvPalette.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Row(Modifier.fillMaxWidth().padding(top = 5.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(item.year ?: "—", color = TvPalette.muted, fontSize = 13.sp)
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = item.title,
+                    color = TvPalette.text,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = item.year ?: "—",
+                        color = TvPalette.muted,
+                        fontSize = 12.sp,
+                    )
                     if (item.rating != null && item.rating > 0.0) {
-                        Text("★ ${"%.1f".format(item.rating)} · TMDB", color = TvPalette.accent, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        ) {
+                            Text(
+                                text = "★",
+                                color = TvPalette.ratingGold,
+                                fontSize = 11.sp,
+                            )
+                            Text(
+                                text = "%.1f".format(item.rating),
+                                color = TvPalette.ratingGold,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     }
                 }
             }
@@ -483,52 +837,168 @@ private fun TvViewAllCard(
 ) {
     AppClickableSurface(
         onClick = onClick,
-        modifier = if (categoryCard) Modifier.width(if (compactLayout) 150.dp else 205.dp).height(112.dp) else Modifier.width(174.dp).height(326.dp),
-        shape = RoundedCornerShape(8.dp),
-        containerColor = Color(0xFF202223),
-        borderStroke = BorderStroke(1.dp, Color(0xFF343638)),
+        modifier = if (categoryCard) {
+            Modifier
+                .width(if (compactLayout) 150.dp else 210.dp)
+                .height(if (compactLayout) 85.dp else 110.dp)
+        } else {
+            Modifier
+                .width(190.dp)
+                .height(340.dp)
+        },
+        shape = RoundedCornerShape(10.dp),
+        containerColor = TvPalette.surfaceLight,
+        borderStroke = BorderStroke(1.dp, TvPalette.cardBorder),
     ) {
-        Box(Modifier.fillMaxSize().padding(18.dp), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("›", color = TvPalette.text, fontSize = 36.sp, fontWeight = FontWeight.Light)
-                Text(label, color = TvPalette.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(Color(0x263B82F6))
+                        .padding(8.dp)
+                ) {
+                    Text("›", color = TvPalette.accent, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                }
+                Text(
+                    text = label,
+                    color = TvPalette.text,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun TvContinueBrowseRow(items: List<ContinueWatchingItem>, compactLayout: Boolean, onContinue: (ContinueWatchingItem) -> Unit) {
+private fun TvContinueBrowseRow(
+    items: List<ContinueWatchingItem>,
+    compactLayout: Boolean,
+    onContinue: (ContinueWatchingItem) -> Unit,
+) {
     Column {
-        Text("Continue Watching", modifier = Modifier.padding(bottom = 9.dp), color = TvPalette.text, fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            text = "Continue Watching",
+            modifier = Modifier.padding(bottom = 12.dp),
+            color = TvPalette.text,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = (-0.3).sp,
+        )
         LazyRow(
             state = rememberLazyListState(initialFirstVisibleItemIndex = 0),
             reverseLayout = false,
             modifier = Modifier.fillMaxWidth().focusGroup(),
-            horizontalArrangement = Arrangement.spacedBy(15.dp),
-            contentPadding = PaddingValues(start = 3.dp, end = 3.dp, top = 3.dp, bottom = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(start = 2.dp, end = 2.dp, top = 2.dp, bottom = 6.dp),
         ) {
             if (items.isEmpty()) {
                 item {
-                    Box(Modifier.width(if (compactLayout) 320.dp else 420.dp).height(82.dp).clip(RoundedCornerShape(8.dp)).background(TvPalette.surface), contentAlignment = Alignment.CenterStart) {
-                        Text("Continue Watching will appear here after you start playback.", modifier = Modifier.padding(horizontal = 18.dp), color = TvPalette.muted, fontSize = 15.sp)
+                    Box(
+                        Modifier
+                            .width(if (compactLayout) 300.dp else 420.dp)
+                            .height(86.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(TvPalette.surface)
+                            .border(1.dp, TvPalette.cardBorder, RoundedCornerShape(10.dp)),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        Text(
+                            text = "Continue Watching will appear here after playback starts.",
+                            modifier = Modifier.padding(horizontal = 20.dp),
+                            color = TvPalette.muted,
+                            fontSize = 14.sp,
+                        )
                     }
                 }
             } else {
                 items(items, key = { "continue-${it.item.type}:${it.item.tmdbId}" }) { continueItem ->
                     AppClickableSurface(
                         onClick = { onContinue(continueItem) },
-                        modifier = Modifier.width(if (compactLayout) 235.dp else 270.dp).height(132.dp),
+                        modifier = Modifier
+                            .width(if (compactLayout) 210.dp else 260.dp)
+                            .height(if (compactLayout) 130.dp else 150.dp),
                         shape = RoundedCornerShape(10.dp),
                         containerColor = TvPalette.surface,
-                        borderStroke = BorderStroke(1.dp, Color(0xFF343638)),
+                        borderStroke = BorderStroke(1.dp, TvPalette.cardBorder),
                     ) {
-                        Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.Bottom) {
-                            Text("RESUME", color = TvPalette.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Text(continueItem.item.title, modifier = Modifier.padding(top = 6.dp), color = TvPalette.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(continueItem.progressLabel, modifier = Modifier.padding(top = 3.dp), color = TvPalette.muted, fontSize = 13.sp, maxLines = 1)
-                            Box(Modifier.fillMaxWidth().padding(top = 9.dp).height(3.dp).clip(RoundedCornerShape(3.dp)).background(Color(0xFF48494C))) {
-                                Box(Modifier.fillMaxWidth((continueItem.positionMs.toFloat() / continueItem.durationMs.coerceAtLeast(1)).coerceIn(0f, 1f)).height(3.dp).background(TvPalette.accent))
+                        Box(Modifier.fillMaxSize()) {
+                            val posterUrl = tmdbImageUrl(continueItem.item.posterPath, "w342")
+                            if (posterUrl != null) {
+                                AsyncImage(
+                                    model = posterUrl,
+                                    contentDescription = "${continueItem.item.title} backdrop",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop,
+                                )
+                                Box(
+                                    Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(
+                                                    Color(0x550A0C10),
+                                                    Color(0xF00A0C10),
+                                                )
+                                            )
+                                        )
+                                )
+                            }
+                            Column(
+                                Modifier
+                                    .fillMaxSize()
+                                    .padding(14.dp),
+                                verticalArrangement = Arrangement.Bottom,
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(TvPalette.badgeBg)
+                                        .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "RESUME",
+                                        color = TvPalette.accent,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                }
+                                Text(
+                                    text = continueItem.item.title,
+                                    modifier = Modifier.padding(top = 6.dp),
+                                    color = TvPalette.text,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Text(
+                                    text = continueItem.progressLabel,
+                                    modifier = Modifier.padding(top = 2.dp),
+                                    color = TvPalette.muted,
+                                    fontSize = 12.sp,
+                                    maxLines = 1,
+                                )
+                            }
+                            val progressFraction = (continueItem.positionMs.toFloat() / continueItem.durationMs.coerceAtLeast(1L)).coerceIn(0f, 1f)
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(4.dp)
+                                    .align(Alignment.BottomStart)
+                                    .background(Color(0x26FFFFFF))
+                            ) {
+                                Box(
+                                    Modifier
+                                        .fillMaxWidth(progressFraction)
+                                        .height(4.dp)
+                                        .background(TvPalette.accent)
+                                )
                             }
                         }
                     }
@@ -554,10 +1024,13 @@ internal fun AppClickableSurface(
             onClick = onClick,
             modifier = modifier,
             shape = ClickableSurfaceDefaults.shape(shape = shape),
-            colors = ClickableSurfaceDefaults.colors(containerColor = containerColor, focusedContainerColor = TvPalette.surfaceFocused),
+            colors = ClickableSurfaceDefaults.colors(
+                containerColor = containerColor,
+                focusedContainerColor = TvPalette.surfaceFocused,
+            ),
             border = ClickableSurfaceDefaults.border(
                 border = androidx.tv.material3.Border(borderStroke ?: BorderStroke(0.dp, Color.Transparent)),
-                focusedBorder = androidx.tv.material3.Border(BorderStroke(3.dp, TvPalette.focus)),
+                focusedBorder = androidx.tv.material3.Border(BorderStroke(2.dp, TvPalette.focus)),
             ),
             content = content,
         )

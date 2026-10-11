@@ -22,9 +22,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import com.vistaro.app.data.mongo.MongoCatalogRepository
+
 class TmdbRepository(
     private val apiFactory: TmdbApiFactory,
     private val database: CatalogDatabase,
+    private val mongoCatalogRepository: MongoCatalogRepository? = null,
 ) {
     private val api: TmdbApi by lazy(apiFactory::create)
     private var lastPopularRefreshAt = 0L
@@ -86,24 +89,27 @@ class TmdbRepository(
         return try {
             val show = api.tvDetails(showTmdbId).toModel(System.currentTimeMillis())
             val season = api.seasonDetails(showTmdbId, seasonNumber)
+            val episodeEntities = season.episodes.map { episode ->
+                EpisodeEntity(
+                    tmdbId = episode.id,
+                    showTmdbId = showTmdbId,
+                    seasonNumber = episode.seasonNumber,
+                    episodeNumber = episode.episodeNumber,
+                    title = episode.name,
+                    overview = episode.overview,
+                    airDate = episode.airDate,
+                    rating = episode.voteAverage,
+                    stillPath = episode.stillPath,
+                    updatedAt = System.currentTimeMillis(),
+                )
+            }
             database.withTransaction {
                 database.tvShowDao().upsertAll(listOf(show.toEntity()))
-                database.episodeDao().upsertAll(
-                    season.episodes.map { episode ->
-                        EpisodeEntity(
-                            tmdbId = episode.id,
-                            showTmdbId = showTmdbId,
-                            seasonNumber = episode.seasonNumber,
-                            episodeNumber = episode.episodeNumber,
-                            title = episode.name,
-                            overview = episode.overview,
-                            airDate = episode.airDate,
-                            rating = episode.voteAverage,
-                            stillPath = episode.stillPath,
-                            updatedAt = System.currentTimeMillis(),
-                        )
-                    },
-                )
+                database.episodeDao().upsertAll(episodeEntities)
+            }
+            mongoCatalogRepository?.let { mongo ->
+                mongo.saveTvShow(show.toEntity())
+                mongo.saveSeasonEpisodes(showTmdbId, seasonNumber, episodeEntities)
             }
             null
         } catch (error: Exception) {
@@ -174,6 +180,92 @@ class TmdbRepository(
         }
     }
 
+    suspend fun fetchTrending(timeWindow: String = "day"): CatalogPage {
+        if (!isConfigured) return CatalogPage(emptyList(), 1, 1, "Add TMDB_ACCESS_TOKEN to secrets.properties to view trending titles.")
+        return try {
+            val response = api.trending(mediaType = "all", timeWindow = timeWindow, page = 1)
+            val now = System.currentTimeMillis()
+            val rawResults = response.results.filter { it.id > 0 && (!it.title.isNullOrBlank() || !it.name.isNullOrBlank()) }
+            val movieDtos = rawResults.filter { it.mediaType == "movie" || (it.mediaType == null && !it.title.isNullOrBlank()) }
+            val tvDtos = rawResults.filter { it.mediaType == "tv" || (it.mediaType == null && !it.name.isNullOrBlank()) }
+
+            val allowedMovieIds = allowedIds(MediaType.MOVIE, movieDtos.map { it.id })
+            val allowedTvIds = allowedIds(MediaType.TV_SHOW, tvDtos.map { it.id })
+
+            val movieEntities = movieDtos.filter { it.id in allowedMovieIds }.map { dto ->
+                Movie(
+                    tmdbId = dto.id,
+                    imdbId = null,
+                    title = dto.title.orEmpty(),
+                    originalTitle = dto.title.orEmpty(),
+                    overview = dto.overview,
+                    releaseDate = dto.releaseDate,
+                    rating = dto.voteAverage,
+                    voteCount = 0,
+                    popularity = 0.0,
+                    posterPath = dto.posterPath,
+                    backdropPath = dto.backdropPath,
+                    originalLanguage = null,
+                    updatedAt = now,
+                )
+            }
+            val tvEntities = tvDtos.filter { it.id in allowedTvIds }.map { dto ->
+                TvShow(
+                    tmdbId = dto.id,
+                    imdbId = null,
+                    title = dto.name.orEmpty(),
+                    originalTitle = dto.name.orEmpty(),
+                    overview = dto.overview,
+                    firstAirDate = dto.firstAirDate,
+                    rating = dto.voteAverage,
+                    voteCount = 0,
+                    popularity = 0.0,
+                    posterPath = dto.posterPath,
+                    backdropPath = dto.backdropPath,
+                    originalLanguage = null,
+                    numberOfSeasons = 1,
+                    numberOfEpisodes = 1,
+                    updatedAt = now,
+                )
+            }
+
+            database.withTransaction {
+                if (movieEntities.isNotEmpty()) database.movieDao().upsertAll(movieEntities.map { it.toEntity() })
+                if (tvEntities.isNotEmpty()) database.tvShowDao().upsertAll(tvEntities.map { it.toEntity() })
+            }
+
+            val items = rawResults.mapNotNull { dto ->
+                val isMovie = dto.mediaType == "movie" || (dto.mediaType == null && !dto.title.isNullOrBlank())
+                if (isMovie && dto.id in allowedMovieIds) {
+                    CatalogItem(
+                        tmdbId = dto.id,
+                        type = MediaType.MOVIE,
+                        title = dto.title.orEmpty(),
+                        year = dto.releaseDate?.take(4),
+                        posterPath = dto.posterPath,
+                        rating = dto.voteAverage,
+                    )
+                } else if (!isMovie && dto.id in allowedTvIds) {
+                    CatalogItem(
+                        tmdbId = dto.id,
+                        type = MediaType.TV_SHOW,
+                        title = dto.name.orEmpty(),
+                        year = dto.firstAirDate?.take(4),
+                        posterPath = dto.posterPath,
+                        rating = dto.voteAverage,
+                    )
+                } else null
+            }.take(20)
+
+            CatalogPage(items, 1, 1)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            CatalogPage(emptyList(), 1, 1, error.userMessage())
+        }
+    }
+
+
     suspend fun searchAvailable(query: String, page: Int): CatalogPage {
         val normalizedQuery = query.trim()
         if (normalizedQuery.isBlank()) return CatalogPage(emptyList(), 1, 1)
@@ -201,6 +293,10 @@ class TmdbRepository(
                 if (movies.isNotEmpty()) database.movieDao().upsertAll(movies.map { it.toEntity() })
                 if (shows.isNotEmpty()) database.tvShowDao().upsertAll(shows.map { it.toEntity() })
             }
+            mongoCatalogRepository?.let { mongo ->
+                movies.forEach { mongo.saveMovie(it.toEntity()) }
+                shows.forEach { mongo.saveTvShow(it.toEntity()) }
+            }
             val items = (movies.map { CatalogItem(it.tmdbId, MediaType.MOVIE, it.title, it.releaseDate?.take(4), it.posterPath, it.rating) } +
                 shows.map { CatalogItem(it.tmdbId, MediaType.TV_SHOW, it.title, it.firstAirDate?.take(4), it.posterPath, it.rating) })
                 .take(MAX_SEARCH_RESULTS_PER_PAGE)
@@ -208,7 +304,12 @@ class TmdbRepository(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            CatalogPage(emptyList(), page, page, error.userMessage())
+            val mongoFallback = mongoCatalogRepository?.searchOnline(normalizedQuery, MAX_SEARCH_RESULTS_PER_PAGE).orEmpty()
+            if (mongoFallback.isNotEmpty()) {
+                CatalogPage(mongoFallback, page, 1)
+            } else {
+                CatalogPage(emptyList(), page, page, error.userMessage())
+            }
         }
     }
 

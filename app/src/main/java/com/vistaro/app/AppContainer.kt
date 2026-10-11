@@ -17,6 +17,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
+import com.vistaro.app.data.mongo.MongoCatalogRepository
+import com.vistaro.app.data.mongo.MongoManager
+import com.vistaro.app.data.mongo.MongoUserRepository
+import kotlinx.coroutines.launch
+
 /** App-scoped dependency container. */
 class AppContainer(context: Context) {
     private val applicationContext = context.applicationContext
@@ -28,18 +33,39 @@ class AppContainer(context: Context) {
             .build()
     }
 
+    val mongoManager: MongoManager by lazy { MongoManager() }
+    val mongoCatalogRepository: MongoCatalogRepository by lazy {
+        MongoCatalogRepository(mongoManager, catalogDatabase)
+    }
+    val mongoUserRepository: MongoUserRepository by lazy {
+        MongoUserRepository(mongoManager, catalogDatabase)
+    }
+
     val roomCatalogRepository: CatalogRepository by lazy { RoomCatalogRepository(catalogDatabase) }
     private val sampleCatalogRepository: CatalogRepository by lazy { FakeCatalogRepository() }
     val catalogRepository: CatalogRepository by lazy {
         FallbackCatalogRepository(roomCatalogRepository, sampleCatalogRepository)
     }
     val tmdbRepository: TmdbRepository by lazy {
-        TmdbRepository(TmdbApiFactory(BuildConfig.TMDB_ACCESS_TOKEN), catalogDatabase)
+        TmdbRepository(TmdbApiFactory(BuildConfig.TMDB_ACCESS_TOKEN), catalogDatabase, mongoCatalogRepository)
     }
     val catalogSyncManager: CatalogSyncManager by lazy {
         CatalogSyncManager(applicationContext, catalogDatabase, tmdbRepository)
     }
     val playbackProvider by lazy { VidApiPlaybackProvider() }
-    val favoriteRepository by lazy { FavoriteRepository(catalogDatabase) }
-    val watchProgressRepository by lazy { WatchProgressRepository(catalogDatabase) }
+    val favoriteRepository by lazy { FavoriteRepository(catalogDatabase, mongoUserRepository) }
+    val watchProgressRepository by lazy { WatchProgressRepository(catalogDatabase, mongoUserRepository) }
+
+    init {
+        if (mongoManager.isConfigured) {
+            ioScope.launch {
+                try {
+                    mongoManager.initializeIndexes()
+                    mongoUserRepository.syncFromRemote()
+                } catch (t: Throwable) {
+                    android.util.Log.w("AppContainer", "Mongo background init failed: ${t.message}")
+                }
+            }
+        }
+    }
 }

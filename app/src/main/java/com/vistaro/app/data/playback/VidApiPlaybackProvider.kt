@@ -1,6 +1,5 @@
 package com.vistaro.app.data.playback
 
-import android.net.Uri
 
 /** Builds the official VidAPI embed URLs; stream/source resolution remains on VidAPI. */
 class VidApiPlaybackProvider(
@@ -26,9 +25,8 @@ class VidApiPlaybackProvider(
     }
 
     private fun buildUrl(type: String, id: String, resumeAtSeconds: Long, season: Int? = null, episode: Int? = null): String {
-        val uri = Uri.parse(baseUrl).buildUpon().appendPath(type).appendPath(id)
-        if (season != null && episode != null) uri.appendPath(season.toString()).appendPath(episode.toString())
-        if (resumeAtSeconds > 0) uri.appendQueryParameter("resumeAt", resumeAtSeconds.toString())
-        return uri.build().toString()
+        val base = baseUrl.trimEnd('/')
+        val path = if (season != null && episode != null) "$base/$type/$id/$season/$episode" else "$base/$type/$id"
+        return if (resumeAtSeconds > 0) "$path?resumeAt=$resumeAtSeconds" else path
     }
 }

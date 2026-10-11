@@ -3,6 +3,7 @@ package com.vistaro.app
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
@@ -27,6 +28,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -35,7 +39,11 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -66,6 +74,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.tv.material3.Button as TvButton
+import androidx.compose.material3.Button as MobileButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme as TvMaterialTheme
 import androidx.tv.material3.Surface as TvSurface
 import kotlinx.coroutines.CancellationException
@@ -412,10 +422,41 @@ private fun TvTopNavigation(
     onFavorites: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 40.dp, vertical = 10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xF00A0C10))
+            .border(1.dp, Color(0x0DFFFFFF))
+            .padding(horizontal = 36.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(end = 24.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(TvPalette.accent)
+                    .padding(6.dp)
+            ) {
+                Text(
+                    text = "▶",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Black,
+                )
+            }
+            Text(
+                text = "Vistaro",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = (-0.5).sp,
+            )
+        }
+
         tvDestinations.forEach { destination ->
             val active = currentRoute?.let { it == destination.route || it.startsWith("${destination.route}/") } == true
             TvSurface(
@@ -423,27 +464,29 @@ private fun TvTopNavigation(
                 modifier = Modifier,
                 shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                 colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(
-                    containerColor = if (active) Color(0xFF292A2D) else Color.Transparent,
+                    containerColor = if (active) Color(0x2E3B82F6) else Color.Transparent,
                     focusedContainerColor = TvPalette.surfaceFocused,
                 ),
                 border = androidx.tv.material3.ClickableSurfaceDefaults.border(
+                    border = androidx.tv.material3.Border(
+                        if (active) androidx.compose.foundation.BorderStroke(1.dp, Color(0x663B82F6))
+                        else androidx.compose.foundation.BorderStroke(0.dp, Color.Transparent)
+                    ),
                     focusedBorder = androidx.tv.material3.Border(border = androidx.compose.foundation.BorderStroke(2.dp, TvPalette.focus)),
                 ),
             ) {
                 Text(
                     destination.label,
-                    modifier = Modifier.padding(horizontal = 17.dp, vertical = 12.dp),
-                    color = TvPalette.text,
-                    fontSize = 17.sp,
-                    fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
+                    color = if (active) Color.White else TvPalette.muted,
+                    fontSize = 15.sp,
+                    fontWeight = if (active) FontWeight.Bold else FontWeight.SemiBold,
                 )
             }
         }
-        TvNavigationAction("⌕  Search", currentRoute == "search", onSearch)
-        TvNavigationAction("★  Favorites", currentRoute == "favorites", onFavorites)
-        TvNavigationAction("⚙  Settings", currentRoute == "settings", onSettings)
-        Spacer(Modifier.weight(1f))
-        Text("VISTARO", color = TvPalette.muted, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+        TvNavigationAction("⌕ Search", currentRoute == "search", onSearch)
+        TvNavigationAction("★ Favorites", currentRoute == "favorites", onFavorites)
+        TvNavigationAction("⚙ Settings", currentRoute == "settings", onSettings)
     }
 }
 
@@ -451,17 +494,26 @@ private fun TvTopNavigation(
 private fun TvNavigationAction(label: String, active: Boolean, onClick: () -> Unit) {
     TvSurface(
         onClick = onClick,
-        modifier = Modifier.height(48.dp),
-        shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(7.dp)),
+        shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
         colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(
-            containerColor = if (active) Color(0xFF292A2D) else Color.Transparent,
+            containerColor = if (active) Color(0x2E3B82F6) else Color.Transparent,
             focusedContainerColor = TvPalette.surfaceFocused,
         ),
         border = androidx.tv.material3.ClickableSurfaceDefaults.border(
+            border = androidx.tv.material3.Border(
+                if (active) androidx.compose.foundation.BorderStroke(1.dp, Color(0x663B82F6))
+                else androidx.compose.foundation.BorderStroke(0.dp, Color.Transparent)
+            ),
             focusedBorder = androidx.tv.material3.Border(border = androidx.compose.foundation.BorderStroke(2.dp, TvPalette.focus)),
         ),
     ) {
-        Text(label, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp), color = TvPalette.text, fontSize = 16.sp)
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+            color = if (active) Color.White else TvPalette.muted,
+            fontSize = 15.sp,
+            fontWeight = if (active) FontWeight.Bold else FontWeight.SemiBold,
+        )
     }
 }
 
@@ -514,6 +566,12 @@ private fun TvPosterCard(item: CatalogItem, onClick: () -> Unit) {
     }
 }
 
+private enum class SearchTypeFilter(val label: String) {
+    ALL("All Titles"),
+    MOVIES("Movies"),
+    SHOWS("TV Shows"),
+}
+
 @Composable
 private fun TvSearchScreen(
     repository: com.vistaro.app.data.tmdb.TmdbRepository,
@@ -521,12 +579,14 @@ private fun TvSearchScreen(
     onItem: (CatalogItem) -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
-    var results by remember { mutableStateOf(emptyList<CatalogItem>()) }
+    var selectedFilter by rememberSaveable { mutableStateOf(SearchTypeFilter.ALL) }
+    var rawResults by remember { mutableStateOf(emptyList<CatalogItem>()) }
     var page by remember { mutableIntStateOf(1) }
     var totalPages by remember { mutableIntStateOf(1) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var retry by remember { mutableIntStateOf(0) }
+
     LaunchedEffect(query, page, retry, repository) {
         if (query.isBlank()) {
             loading = false
@@ -537,8 +597,8 @@ private fun TvSearchScreen(
         error = null
         try {
             val response = repository.searchAvailable(query, page)
-            if (page == 1) results = response.items
-            else results = (results + response.items).distinctBy { "${it.type}:${it.tmdbId}" }.take(120)
+            if (page == 1) rawResults = response.items
+            else rawResults = (rawResults + response.items).distinctBy { "${it.type}:${it.tmdbId}" }.take(120)
             totalPages = response.totalPages.coerceAtMost(3)
             error = response.error
         } catch (cancelled: CancellationException) {
@@ -547,46 +607,157 @@ private fun TvSearchScreen(
             loading = false
         }
     }
-    Column(Modifier.fillMaxSize().padding(horizontal = if (compactLayout) 16.dp else 44.dp, vertical = 24.dp)) {
-        Text("Search", fontSize = if (compactLayout) 28.sp else 34.sp, fontWeight = FontWeight.Bold)
-        TextField(
-            value = query,
-            onValueChange = {
-                query = it
-                page = 1
-                results = emptyList()
-                totalPages = 1
-                error = null
-            },
-            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-            singleLine = true,
-            label = { Text("Search movies and TV shows") },
-        )
+
+    val filteredResults = remember(rawResults, selectedFilter) {
+        when (selectedFilter) {
+            SearchTypeFilter.ALL -> rawResults
+            SearchTypeFilter.MOVIES -> rawResults.filter { it.type == MediaType.MOVIE }
+            SearchTypeFilter.SHOWS -> rawResults.filter { it.type == MediaType.TV_SHOW }
+        }
+    }
+
+    Column(Modifier.fillMaxSize().padding(horizontal = if (compactLayout) 16.dp else 40.dp, vertical = 20.dp)) {
         Text(
-            when {
-                error != null -> error!!
-                query.isBlank() -> "Search online for movies and TV shows"
-                loading && results.isEmpty() -> "Searching TMDB…"
-                results.isEmpty() -> "No matching movies or TV shows in the VidAPI catalog."
-                else -> "${results.size} results"
-            },
-            modifier = Modifier.padding(top = 14.dp, bottom = 10.dp),
-            color = TvPalette.muted,
-            fontSize = 17.sp,
+            text = "Search Titles",
+            fontSize = if (compactLayout) 26.sp else 32.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = TvPalette.text,
+            letterSpacing = (-0.5).sp,
         )
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f).focusRestorer()) {
-            items(results, key = { "${it.type}:${it.tmdbId}" }) { item ->
-                TvResultCard(item, onClick = { onItem(item) })
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(TvPalette.surface)
+                .border(1.dp, Color(0x1FFFFFFF), RoundedCornerShape(12.dp))
+        ) {
+            TextField(
+                value = query,
+                onValueChange = {
+                    query = it
+                    page = 1
+                    rawResults = emptyList()
+                    totalPages = 1
+                    error = null
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                placeholder = {
+                    Text(
+                        "Search movies, shows, genres...",
+                        color = TvPalette.muted,
+                        fontSize = 15.sp,
+                    )
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent,
+                    focusedTextColor = TvPalette.text,
+                    unfocusedTextColor = TvPalette.text,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                ),
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .padding(top = 14.dp, bottom = 12.dp)
+                .focusGroup(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SearchTypeFilter.values().forEach { filter ->
+                val isSelected = selectedFilter == filter
+                AppClickableSurface(
+                    onClick = { selectedFilter = filter },
+                    modifier = Modifier,
+                    shape = RoundedCornerShape(20.dp),
+                    containerColor = if (isSelected) Color(0x333B82F6) else TvPalette.surface,
+                    borderStroke = BorderStroke(
+                        1.dp,
+                        if (isSelected) TvPalette.accent else Color(0x1AFFFFFF),
+                    ),
+                ) {
+                    Text(
+                        text = filter.label,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 7.dp),
+                        color = if (isSelected) Color.White else TvPalette.muted,
+                        fontSize = 13.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    )
+                }
+            }
+        }
+
+        Text(
+            text = when {
+                error != null -> error!!
+                query.isBlank() -> "Find and stream movies & TV shows across the library"
+                loading && filteredResults.isEmpty() -> "Searching TMDB catalog…"
+                filteredResults.isEmpty() -> "No matching titles found in the VidAPI catalog."
+                else -> "${filteredResults.size} title${if (filteredResults.size > 1) "s" else ""} found"
+            },
+            modifier = Modifier.padding(bottom = 14.dp),
+            color = TvPalette.muted,
+            fontSize = 14.sp,
+        )
+
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(if (compactLayout) 140.dp else 190.dp),
+            modifier = Modifier.weight(1f).focusRestorer(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(bottom = 36.dp),
+        ) {
+            items(filteredResults, key = { "${it.type}:${it.tmdbId}" }) { item ->
+                TvMediaTile(item, onClick = { onItem(item) })
             }
             if (error != null) {
-                item { TvButton(onClick = { retry++ }) { Text("Retry") } }
+                item { AppButton(onClick = { retry++ }) { Text("Retry") } }
             }
             if (page < totalPages && !loading && error == null) {
-                item { TvButton(onClick = { page++ }) { Text("Load more") } }
+                item { AppButton(onClick = { page++ }) { Text("Load more") } }
             }
-            if (loading && results.isNotEmpty()) {
+            if (loading && filteredResults.isNotEmpty()) {
                 item { Text("Loading more…", color = TvPalette.muted, modifier = Modifier.padding(12.dp)) }
             }
+        }
+    }
+}
+
+@Composable
+internal fun AppButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isPrimary: Boolean = false,
+    content: @Composable () -> Unit,
+) {
+    val context = LocalContext.current
+    val isTv = remember(context) { context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK) }
+    if (isTv) {
+        TvButton(
+            onClick = onClick,
+            modifier = modifier,
+            colors = androidx.tv.material3.ButtonDefaults.colors(
+                containerColor = if (isPrimary) TvPalette.accent else TvPalette.surfaceLight,
+                focusedContainerColor = if (isPrimary) TvPalette.accentHover else TvPalette.surfaceFocused,
+            ),
+        ) { content() }
+    } else {
+        MobileButton(
+            onClick = onClick,
+            modifier = modifier,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isPrimary) TvPalette.accent else TvPalette.surfaceLight,
+                contentColor = if (isPrimary) Color.White else TvPalette.text,
+            ),
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            content()
         }
     }
 }
@@ -623,32 +794,127 @@ private fun TvMovieDetailsScreen(
     if (movie == null) return TvMissingDetails("Movie", onBack)
     LazyColumn(
         modifier = Modifier.fillMaxSize().focusRestorer(),
-        contentPadding = PaddingValues(start = if (compactLayout) 18.dp else 48.dp, end = if (compactLayout) 18.dp else 48.dp, top = 18.dp, bottom = 48.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(bottom = 48.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
-        item { TvButton(onClick = onBack) { Text("Back") } }
         item {
-            Column(Modifier.widthIn(max = 820.dp)) {
-                Text("MOVIE", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                Text(movie.title, modifier = Modifier.padding(top = 8.dp), fontSize = if (compactLayout) 30.sp else 42.sp, fontWeight = FontWeight.Bold)
-                Text("${movie.releaseDate?.take(4).orEmpty()}  ·  ${movie.rating?.let { "★ ${"%.1f".format(it)}" } ?: "Not rated"}", modifier = Modifier.padding(top = 8.dp), color = TvPalette.muted, fontSize = 19.sp)
-                Text(movie.overview, modifier = Modifier.padding(top = 16.dp), color = TvPalette.text, fontSize = if (compactLayout) 16.sp else 19.sp, lineHeight = if (compactLayout) 23.sp else 27.sp)
-                tmdbImageUrl(movie.backdropPath, "w780")?.let { image ->
-                    AsyncImage(image, contentDescription = "${movie.title} backdrop", modifier = Modifier.fillMaxWidth().height(if (compactLayout) 210.dp else 270.dp).padding(top = 16.dp), contentScale = ContentScale.Crop)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(if (compactLayout) 280.dp else 420.dp)
+            ) {
+                val backdropUrl = tmdbImageUrl(movie.backdropPath ?: movie.posterPath, "w780")
+                if (backdropUrl != null) {
+                    AsyncImage(
+                        model = backdropUrl,
+                        contentDescription = "${movie.title} backdrop",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0x330A0C10),
+                                    Color(0x990A0C10),
+                                    TvPalette.background,
+                                )
+                            )
+                        )
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = if (compactLayout) 18.dp else 44.dp, vertical = 24.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    AppButton(onClick = onBack) { Text("‹  Back") }
+
+                    Column(Modifier.widthIn(max = 840.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(TvPalette.accent)
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text("MOVIE", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Text(
+                            text = movie.title,
+                            modifier = Modifier.padding(top = 10.dp),
+                            fontSize = if (compactLayout) 28.sp else 40.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = TvPalette.text,
+                            letterSpacing = (-0.5).sp,
+                        )
+                        Row(
+                            modifier = Modifier.padding(top = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(movie.releaseDate?.take(4) ?: "—", color = TvPalette.muted, fontSize = 15.sp)
+                            Text("•", color = TvPalette.muted, fontSize = 14.sp)
+                            movie.rating?.takeIf { it > 0.0 }?.let { rating ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    Text("★", color = TvPalette.ratingGold, fontSize = 13.sp)
+                                    Text("%.1f TMDB".format(rating), color = TvPalette.ratingGold, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                }
+                            } ?: Text("Not rated", color = TvPalette.muted, fontSize = 14.sp)
+                        }
+                    }
                 }
             }
         }
+
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.focusGroup()) {
-                TvButton(onClick = onPlay) { Text("Watch Now") }
-                TvButton(onClick = onToggleFavorite) { Text(if (isFavorite) "Remove Favorite" else "Add to Favorites") }
-            }
-        }
-        if (metadataMessage.isNotBlank()) {
-            item {
-                Column {
-                    Text(metadataMessage, color = TvPalette.muted, fontSize = 15.sp)
-                    TvButton(onClick = onRetryMetadata, modifier = Modifier.padding(top = 6.dp)) { Text("Retry metadata") }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = if (compactLayout) 18.dp else 44.dp, vertical = 18.dp)
+                    .widthIn(max = 840.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.focusGroup().padding(bottom = 20.dp),
+                ) {
+                    AppButton(onClick = onPlay, isPrimary = true) {
+                        Text("▶  Play Movie", fontWeight = FontWeight.Bold)
+                    }
+                    AppButton(onClick = onToggleFavorite) {
+                        Text(if (isFavorite) "★  Favorited" else "☆  Add to Favorites")
+                    }
+                }
+
+                Text(
+                    text = "Storyline",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TvPalette.text,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+                Text(
+                    text = movie.overview.ifBlank { "No detailed synopsis available for this title." },
+                    color = Color(0xFFD1D5DB),
+                    fontSize = if (compactLayout) 15.sp else 17.sp,
+                    lineHeight = if (compactLayout) 22.sp else 26.sp,
+                )
+
+                if (metadataMessage.isNotBlank()) {
+                    Row(
+                        modifier = Modifier.padding(top = 18.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(metadataMessage, color = TvPalette.muted, fontSize = 14.sp)
+                        AppButton(onClick = onRetryMetadata) { Text("Retry") }
+                    }
                 }
             }
         }
@@ -669,41 +935,176 @@ private fun TvShowDetailsScreen(
     if (show == null) return TvMissingDetails("TV show", onBack)
     LazyColumn(
         modifier = Modifier.fillMaxSize().focusRestorer(),
-        contentPadding = PaddingValues(start = if (compactLayout) 18.dp else 48.dp, end = if (compactLayout) 18.dp else 48.dp, top = 18.dp, bottom = 48.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(bottom = 48.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
-        item { TvButton(onClick = onBack) { Text("Back") } }
         item {
-            Column(Modifier.widthIn(max = 820.dp)) {
-                Text("TV SERIES", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                Text(show.title, modifier = Modifier.padding(top = 8.dp), fontSize = if (compactLayout) 30.sp else 42.sp, fontWeight = FontWeight.Bold)
-                Text("${show.firstAirDate?.take(4).orEmpty()}  ·  ${show.numberOfSeasons} Seasons  ·  ${show.rating?.let { "★ ${"%.1f".format(it)}" } ?: "Not rated"}", modifier = Modifier.padding(top = 8.dp), color = TvPalette.muted, fontSize = 19.sp)
-                Text(show.overview, modifier = Modifier.padding(top = 16.dp), color = TvPalette.text, fontSize = if (compactLayout) 16.sp else 19.sp, lineHeight = if (compactLayout) 23.sp else 27.sp)
-                tmdbImageUrl(show.backdropPath, "w780")?.let { image ->
-                    AsyncImage(image, contentDescription = "${show.title} backdrop", modifier = Modifier.fillMaxWidth().height(if (compactLayout) 210.dp else 270.dp).padding(top = 16.dp), contentScale = ContentScale.Crop)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(if (compactLayout) 280.dp else 420.dp)
+            ) {
+                val backdropUrl = tmdbImageUrl(show.backdropPath ?: show.posterPath, "w780")
+                if (backdropUrl != null) {
+                    AsyncImage(
+                        model = backdropUrl,
+                        contentDescription = "${show.title} backdrop",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0x330A0C10),
+                                    Color(0x990A0C10),
+                                    TvPalette.background,
+                                )
+                            )
+                        )
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = if (compactLayout) 18.dp else 44.dp, vertical = 24.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    AppButton(onClick = onBack) { Text("‹  Back") }
+
+                    Column(Modifier.widthIn(max = 840.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(TvPalette.accent)
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text("TV SERIES", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Text(
+                            text = show.title,
+                            modifier = Modifier.padding(top = 10.dp),
+                            fontSize = if (compactLayout) 28.sp else 40.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = TvPalette.text,
+                            letterSpacing = (-0.5).sp,
+                        )
+                        Row(
+                            modifier = Modifier.padding(top = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(show.firstAirDate?.take(4) ?: "—", color = TvPalette.muted, fontSize = 15.sp)
+                            Text("•", color = TvPalette.muted, fontSize = 14.sp)
+                            Text("${show.numberOfSeasons} Seasons", color = TvPalette.muted, fontSize = 15.sp)
+                            Text("•", color = TvPalette.muted, fontSize = 14.sp)
+                            show.rating?.takeIf { it > 0.0 }?.let { rating ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    Text("★", color = TvPalette.ratingGold, fontSize = 13.sp)
+                                    Text("%.1f TMDB".format(rating), color = TvPalette.ratingGold, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                }
+                            } ?: Text("Not rated", color = TvPalette.muted, fontSize = 14.sp)
+                        }
+                    }
                 }
             }
         }
+
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.focusGroup()) {
-                TvButton(onClick = { onSeason(1) }) { Text("Choose Season") }
-                TvButton(onClick = onToggleFavorite) { Text(if (isFavorite) "Remove Favorite" else "Add to Favorites") }
-            }
-        }
-        if (metadataMessage.isNotBlank()) {
-            item {
-                Column {
-                    Text(metadataMessage, color = TvPalette.muted, fontSize = 15.sp)
-                    TvButton(onClick = onRetryMetadata, modifier = Modifier.padding(top = 6.dp)) { Text("Retry metadata") }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = if (compactLayout) 18.dp else 44.dp, vertical = 18.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.focusGroup().padding(bottom = 20.dp),
+                ) {
+                    AppButton(onClick = { onSeason(1) }, isPrimary = true) {
+                        Text("▶  Play Season 1", fontWeight = FontWeight.Bold)
+                    }
+                    AppButton(onClick = onToggleFavorite) {
+                        Text(if (isFavorite) "★  Favorited" else "☆  Add to Favorites")
+                    }
+                }
+
+                Text(
+                    text = "Overview",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TvPalette.text,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+                Text(
+                    text = show.overview.ifBlank { "No detailed synopsis available for this title." },
+                    color = Color(0xFFD1D5DB),
+                    fontSize = if (compactLayout) 15.sp else 17.sp,
+                    lineHeight = if (compactLayout) 22.sp else 26.sp,
+                )
+
+                if (metadataMessage.isNotBlank()) {
+                    Row(
+                        modifier = Modifier.padding(top = 18.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(metadataMessage, color = TvPalette.muted, fontSize = 14.sp)
+                        AppButton(onClick = onRetryMetadata) { Text("Retry metadata") }
+                    }
+                }
+
+                Text(
+                    text = "Seasons",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TvPalette.text,
+                    modifier = Modifier.padding(top = 28.dp, bottom = 14.dp),
+                )
+                LazyRow(
+                    state = rememberLazyListState(initialFirstVisibleItemIndex = 0),
+                    reverseLayout = false,
+                    modifier = Modifier.fillMaxWidth().focusGroup(),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    items((1..show.numberOfSeasons).toList()) { seasonNumber ->
+                        AppClickableSurface(
+                            onClick = { onSeason(seasonNumber) },
+                            modifier = Modifier
+                                .width(160.dp)
+                                .height(95.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            containerColor = TvPalette.surface,
+                            borderStroke = BorderStroke(1.dp, TvPalette.cardBorder),
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(14.dp),
+                                verticalArrangement = Arrangement.Center,
+                            ) {
+                                Text(
+                                    text = "Season $seasonNumber",
+                                    color = TvPalette.text,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Text(
+                                    text = "Browse episodes ›",
+                                    color = TvPalette.accent,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(top = 4.dp),
+                                )
+                            }
+                        }
+                    }
                 }
             }
-        }
-        item {
-            TvCatalogRow(
-                "Seasons",
-                (1..show.numberOfSeasons).map { season -> CatalogItem(show.tmdbId, MediaType.TV_SHOW, "Season $season", "$season · ${show.numberOfEpisodes / show.numberOfSeasons} episodes") },
-                onItem = { item -> onSeason(item.title.removePrefix("Season ").toIntOrNull() ?: 1) },
-            )
         }
     }
 }
@@ -722,45 +1123,109 @@ private fun TvSeasonScreen(
     if (show == null) return TvMissingDetails("TV show", onBack)
     val count = if (season == show.numberOfSeasons) show.numberOfEpisodes - (season - 1) * (show.numberOfEpisodes / show.numberOfSeasons) else show.numberOfEpisodes / show.numberOfSeasons
     val episodeItems = episodes.filter { it.seasonNumber == season }.takeIf { it.isNotEmpty() }?.map { episode ->
-        CatalogItem(episode.episodeNumber, MediaType.TV_SHOW, "Episode ${episode.episodeNumber} · ${episode.title}", episode.airDate ?: "S${season}E${episode.episodeNumber.toString().padStart(2, '0')}")
+        Triple(
+            episode.episodeNumber,
+            "Episode ${episode.episodeNumber} · ${episode.title}",
+            episode.overview.ifBlank { "Episode ${episode.episodeNumber} of Season $season." },
+        ) to episode.stillPath
     } ?: (1..count.coerceAtLeast(1)).map { episode ->
-        CatalogItem(episode, MediaType.TV_SHOW, "Episode $episode · ${if (episode == 1) "Pilot" else "The Story Continues"}", "S${season}E${episode.toString().padStart(2, '0')}")
+        Triple(
+            episode,
+            "Episode $episode · ${if (episode == 1) "Pilot" else "The Story Continues"}",
+            "Episode $episode of Season $season.",
+        ) to null
     }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().focusRestorer(),
-        contentPadding = PaddingValues(start = if (compactLayout) 18.dp else 48.dp, end = if (compactLayout) 18.dp else 48.dp, top = 18.dp, bottom = 48.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(start = if (compactLayout) 16.dp else 40.dp, end = if (compactLayout) 16.dp else 40.dp, top = 20.dp, bottom = 48.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { TvButton(onClick = onBack) { Text("Back to ${show.title}") } }
         item {
-            Column(Modifier.padding(bottom = 8.dp)) {
-                Text(show.title, color = MaterialTheme.colorScheme.primary, fontSize = 16.sp)
-                Text("Season $season", fontSize = 36.sp, fontWeight = FontWeight.Bold)
-                Text("Choose an episode to continue", color = TvPalette.muted, fontSize = 17.sp)
+            AppButton(onClick = onBack) { Text("‹  Back to ${show.title}") }
+        }
+        item {
+            Column(Modifier.padding(vertical = 8.dp)) {
+                Text(show.title, color = TvPalette.accent, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text("Season $season", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = TvPalette.text)
+                Text("Select an episode to begin playback", color = TvPalette.muted, fontSize = 15.sp)
             }
         }
         if (metadataMessage.isNotBlank()) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(metadataMessage, color = TvPalette.muted, fontSize = 15.sp)
-                    TvButton(onClick = onRetryEpisodes) { Text("Retry") }
+                    Text(metadataMessage, color = TvPalette.muted, fontSize = 14.sp)
+                    AppButton(onClick = onRetryEpisodes) { Text("Retry") }
                 }
             }
         }
-        items(episodeItems, key = { "episode-${it.tmdbId}" }) { episode ->
-            TvSurface(
-                onClick = { onEpisode(episode.tmdbId) },
+        items(episodeItems, key = { "episode-${it.first.first}" }) { (meta, stillPath) ->
+            val (epNum, title, overview) = meta
+            AppClickableSurface(
+                onClick = { onEpisode(epNum) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(9.dp)),
-                colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(containerColor = TvPalette.surface, focusedContainerColor = TvPalette.surfaceFocused),
-                border = androidx.tv.material3.ClickableSurfaceDefaults.border(
-                    focusedBorder = androidx.tv.material3.Border(border = androidx.compose.foundation.BorderStroke(3.dp, TvPalette.focus)),
-                ),
+                shape = RoundedCornerShape(10.dp),
+                containerColor = TvPalette.surface,
+                borderStroke = BorderStroke(1.dp, TvPalette.cardBorder),
             ) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(episode.year.orEmpty(), modifier = Modifier.width(100.dp), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                    Text(episode.title, modifier = Modifier.weight(1f), fontSize = 18.sp)
-                    Text("Play  ›", color = MaterialTheme.colorScheme.primary, fontSize = 16.sp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(if (compactLayout) 100.dp else 140.dp)
+                            .height(if (compactLayout) 60.dp else 80.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(TvPalette.surfaceLight),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val stillUrl = tmdbImageUrl(stillPath, "w300")
+                        if (stillUrl != null) {
+                            AsyncImage(
+                                model = stillUrl,
+                                contentDescription = "$title still",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                            )
+                        } else {
+                            Text("▶", color = TvPalette.accent, fontSize = 20.sp)
+                        }
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = title,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TvPalette.text,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = "Play  ▶",
+                                color = TvPalette.accent,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        Text(
+                            text = overview,
+                            modifier = Modifier.padding(top = 4.dp),
+                            color = TvPalette.muted,
+                            fontSize = 13.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
         }
@@ -916,6 +1381,6 @@ private fun TvSettingRow(title: String, summary: String) {
 private fun TvMissingDetails(kind: String, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(48.dp), verticalArrangement = Arrangement.Center) {
         Text("$kind not found in the local sample catalog.", fontSize = 22.sp)
-        TvButton(onClick = onBack, modifier = Modifier.padding(top = 16.dp)) { Text("Back") }
+        AppButton(onClick = onBack, modifier = Modifier.padding(top = 16.dp)) { Text("Back") }
     }
 }
