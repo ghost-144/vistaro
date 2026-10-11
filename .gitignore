@@ -6,3 +6,4 @@ build/
 **/build/
 *.iml
 .DS_Store
+atlas-credentials.env
