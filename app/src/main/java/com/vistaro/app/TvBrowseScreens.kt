@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -334,10 +335,16 @@ private fun TvTrendingRow(
                 }
             }
 
+            val rowState = rememberLazyListState()
+            LaunchedEffect(items) {
+                if (items.isNotEmpty()) {
+                    rowState.scrollToItem(0)
+                }
+            }
             LazyRow(
-                state = rememberLazyListState(initialFirstVisibleItemIndex = 0),
+                state = rowState,
                 reverseLayout = false,
-                modifier = Modifier.fillMaxWidth().focusGroup(),
+                modifier = Modifier.fillMaxWidth().focusGroup().focusRestorer(),
                 horizontalArrangement = Arrangement.spacedBy(15.dp),
                 contentPadding = PaddingValues(start = 3.dp, end = 3.dp, top = 4.dp, bottom = 8.dp),
             ) {
@@ -627,17 +634,25 @@ private fun TvBrowseRow(
         items = collected.distinctBy { it.tmdbId }.take(20)
         loading = false
     }
+    val rowState = rememberLazyListState()
+    LaunchedEffect(items) {
+        if (items.isNotEmpty()) {
+            rowState.scrollToItem(0)
+        }
+    }
     Column {
         Text(spec.title, modifier = Modifier.padding(bottom = 9.dp), color = TvPalette.text, fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
         LazyRow(
-            state = rememberLazyListState(initialFirstVisibleItemIndex = 0),
+            state = rowState,
             reverseLayout = false,
-            modifier = Modifier.fillMaxWidth().focusGroup(),
+            modifier = Modifier.fillMaxWidth().focusGroup().focusRestorer(),
             horizontalArrangement = Arrangement.spacedBy(15.dp),
             contentPadding = PaddingValues(start = 3.dp, end = 3.dp, top = 4.dp, bottom = 8.dp),
         ) {
             items(items, key = { "${it.type}:${it.tmdbId}:${spec.title}" }) { item -> TvMediaTile(item, onClick = { onItem(item) }) }
-            item(key = "view-all-${spec.title}") { TvViewAllCard(onClick = onViewAll) }
+            if (items.isNotEmpty()) {
+                item(key = "view-all-${spec.title}") { TvViewAllCard(onClick = onViewAll) }
+            }
         }
         if (loading) Text("Loading titles…", modifier = Modifier.padding(top = 3.dp), color = TvPalette.muted, fontSize = 14.sp)
         if (error != null) {
@@ -667,17 +682,25 @@ private fun TvGenreRow(
         genres = result.getOrDefault(emptyList()).take(20)
         error = result.exceptionOrNull()?.message
     }
+    val genreRowState = rememberLazyListState()
+    LaunchedEffect(genres) {
+        if (genres.isNotEmpty()) {
+            genreRowState.scrollToItem(0)
+        }
+    }
     Column {
         Text(title, modifier = Modifier.padding(bottom = 9.dp), color = TvPalette.text, fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
         LazyRow(
-            state = rememberLazyListState(initialFirstVisibleItemIndex = 0),
+            state = genreRowState,
             reverseLayout = false,
-            modifier = Modifier.fillMaxWidth().focusGroup(),
+            modifier = Modifier.fillMaxWidth().focusGroup().focusRestorer(),
             horizontalArrangement = Arrangement.spacedBy(15.dp),
             contentPadding = PaddingValues(start = 3.dp, end = 3.dp, top = 4.dp, bottom = 8.dp),
         ) {
             items(genres, key = { it.id }) { genre -> TvGenreCard(genre, compactLayout, onClick = { onGenre(genre) }) }
-            item(key = "view-all-genres-$type") { TvViewAllCard(label = "View all categories", categoryCard = true, compactLayout = compactLayout, onClick = onViewAll) }
+            if (genres.isNotEmpty()) {
+                item(key = "view-all-genres-$type") { TvViewAllCard(label = "View all categories", categoryCard = true, compactLayout = compactLayout, onClick = onViewAll) }
+            }
         }
         if (error != null) Text(error.orEmpty(), color = TvPalette.muted, fontSize = 14.sp)
         else if (genres.isEmpty()) Text("Loading categories…", color = TvPalette.muted, fontSize = 14.sp)
@@ -889,10 +912,16 @@ private fun TvContinueBrowseRow(
             fontWeight = FontWeight.Bold,
             letterSpacing = (-0.3).sp,
         )
+        val continueRowState = rememberLazyListState()
+        LaunchedEffect(items) {
+            if (items.isNotEmpty()) {
+                continueRowState.scrollToItem(0)
+            }
+        }
         LazyRow(
-            state = rememberLazyListState(initialFirstVisibleItemIndex = 0),
+            state = continueRowState,
             reverseLayout = false,
-            modifier = Modifier.fillMaxWidth().focusGroup(),
+            modifier = Modifier.fillMaxWidth().focusGroup().focusRestorer(),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(start = 2.dp, end = 2.dp, top = 2.dp, bottom = 6.dp),
         ) {
@@ -1023,6 +1052,7 @@ internal fun AppClickableSurface(
         Surface(
             onClick = onClick,
             modifier = modifier,
+            scale = ClickableSurfaceDefaults.scale(1f, 1f, 1f, 1f, 1f),
             shape = ClickableSurfaceDefaults.shape(shape = shape),
             colors = ClickableSurfaceDefaults.colors(
                 containerColor = containerColor,

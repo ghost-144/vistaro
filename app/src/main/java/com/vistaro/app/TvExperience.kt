@@ -33,6 +33,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.NavigationBar
@@ -201,6 +203,7 @@ fun TvAppNavigation(container: AppContainer, useBottomNavigation: Boolean = fals
                         shows = shows,
                         favoriteKeys = favorites,
                         onItem = { item -> navController.navigate(item.detailRoute()) },
+                        compactLayout = useBottomNavigation,
                     )
                 }
                 composable("continue") {
@@ -302,11 +305,14 @@ fun TvAppNavigation(container: AppContainer, useBottomNavigation: Boolean = fals
                     TvShowDetailsScreen(
                         show = show,
                         metadataMessage = metadataMessage,
+                        repository = container.tmdbRepository,
                         onRetryMetadata = { refreshAttempt++ },
                         isFavorite = key in favorites,
                         onToggleFavorite = { coroutineScope.launch { container.favoriteRepository.setFavorite(id, MediaType.TV_SHOW, key !in favorites) } },
                         onBack = { navController.popBackStack() },
-                        onSeason = { season -> navController.navigate("tv/$id/season/$season") },
+                        onPlayEpisode = { season, episode ->
+                            context.playMedia(MediaType.TV_SHOW, id, show?.imdbId, show?.title.orEmpty(), season, episode)
+                        },
                         compactLayout = useBottomNavigation,
                     )
                 }
@@ -426,42 +432,16 @@ private fun TvTopNavigation(
             .fillMaxWidth()
             .background(Color(0xF00A0C10))
             .border(1.dp, Color(0x0DFFFFFF))
-            .padding(horizontal = 36.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+            .padding(horizontal = 36.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(end = 24.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(TvPalette.accent)
-                    .padding(6.dp)
-            ) {
-                Text(
-                    text = "▶",
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Black,
-                )
-            }
-            Text(
-                text = "Vistaro",
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = (-0.5).sp,
-            )
-        }
-
         tvDestinations.forEach { destination ->
             val active = currentRoute?.let { it == destination.route || it.startsWith("${destination.route}/") } == true
             TvSurface(
                 onClick = { onNavigate(destination.route) },
                 modifier = Modifier,
+                scale = androidx.tv.material3.ClickableSurfaceDefaults.scale(1f, 1f, 1f, 1f, 1f),
                 shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
                 colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(
                     containerColor = if (active) Color(0x2E3B82F6) else Color.Transparent,
@@ -477,9 +457,9 @@ private fun TvTopNavigation(
             ) {
                 Text(
                     destination.label,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     color = if (active) Color.White else TvPalette.muted,
-                    fontSize = 15.sp,
+                    fontSize = 13.sp,
                     fontWeight = if (active) FontWeight.Bold else FontWeight.SemiBold,
                 )
             }
@@ -494,6 +474,7 @@ private fun TvTopNavigation(
 private fun TvNavigationAction(label: String, active: Boolean, onClick: () -> Unit) {
     TvSurface(
         onClick = onClick,
+        scale = androidx.tv.material3.ClickableSurfaceDefaults.scale(1f, 1f, 1f, 1f, 1f),
         shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(8.dp)),
         colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(
             containerColor = if (active) Color(0x2E3B82F6) else Color.Transparent,
@@ -509,9 +490,9 @@ private fun TvNavigationAction(label: String, active: Boolean, onClick: () -> Un
     ) {
         Text(
             label,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             color = if (active) Color.White else TvPalette.muted,
-            fontSize = 15.sp,
+            fontSize = 13.sp,
             fontWeight = if (active) FontWeight.Bold else FontWeight.SemiBold,
         )
     }
@@ -519,10 +500,16 @@ private fun TvNavigationAction(label: String, active: Boolean, onClick: () -> Un
 
 @Composable
 private fun TvCatalogRow(title: String, items: List<CatalogItem>, onItem: (CatalogItem) -> Unit) {
+    val rowState = rememberLazyListState()
+    LaunchedEffect(items) {
+        if (items.isNotEmpty()) {
+            rowState.scrollToItem(0)
+        }
+    }
     Column {
         Text(title, modifier = Modifier.padding(bottom = 10.dp), fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
         LazyRow(
-            state = rememberLazyListState(initialFirstVisibleItemIndex = 0),
+            state = rowState,
             reverseLayout = false,
             modifier = Modifier.fillMaxWidth().focusGroup().focusRestorer(),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -540,6 +527,7 @@ private fun TvPosterCard(item: CatalogItem, onClick: () -> Unit) {
     TvSurface(
         onClick = onClick,
         modifier = Modifier.width(190.dp).height(220.dp),
+        scale = androidx.tv.material3.ClickableSurfaceDefaults.scale(1f, 1f, 1f, 1f, 1f),
         shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
         colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(
             containerColor = TvPalette.surface,
@@ -742,6 +730,7 @@ internal fun AppButton(
         TvButton(
             onClick = onClick,
             modifier = modifier,
+            scale = androidx.tv.material3.ButtonDefaults.scale(1f, 1f, 1f, 1f, 1f),
             colors = androidx.tv.material3.ButtonDefaults.colors(
                 containerColor = if (isPrimary) TvPalette.accent else TvPalette.surfaceLight,
                 focusedContainerColor = if (isPrimary) TvPalette.accentHover else TvPalette.surfaceFocused,
@@ -830,10 +819,8 @@ private fun TvMovieDetailsScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = if (compactLayout) 18.dp else 44.dp, vertical = 24.dp),
-                    verticalArrangement = Arrangement.SpaceBetween,
+                    verticalArrangement = Arrangement.Bottom,
                 ) {
-                    AppButton(onClick = onBack) { Text("‹  Back") }
-
                     Column(Modifier.widthIn(max = 840.dp)) {
                         Box(
                             modifier = Modifier
@@ -922,17 +909,128 @@ private fun TvMovieDetailsScreen(
 }
 
 @Composable
+private fun TvEpisodeHorizontalCard(
+    episodeNumber: Int,
+    title: String,
+    overview: String,
+    stillPath: String?,
+    compactLayout: Boolean,
+    onClick: () -> Unit,
+) {
+    AppClickableSurface(
+        onClick = onClick,
+        modifier = Modifier
+            .width(if (compactLayout) 220.dp else 280.dp)
+            .height(if (compactLayout) 180.dp else 210.dp),
+        shape = RoundedCornerShape(10.dp),
+        containerColor = TvPalette.surface,
+        borderStroke = BorderStroke(1.dp, TvPalette.cardBorder),
+    ) {
+        Column(Modifier.fillMaxSize()) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(if (compactLayout) 115.dp else 135.dp)
+                    .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
+                    .background(TvPalette.surfaceLight),
+                contentAlignment = Alignment.Center,
+            ) {
+                val stillUrl = tmdbImageUrl(stillPath, "w300")
+                if (stillUrl != null) {
+                    AsyncImage(
+                        model = stillUrl,
+                        contentDescription = "$title still",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                } else {
+                    Text("▶", color = TvPalette.accent, fontSize = 22.sp)
+                }
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color(0xB30A0C10))
+                            )
+                        )
+                )
+                Box(
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color(0xCC000000))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text("EP $episodeNumber", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TvPalette.text,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = overview,
+                    fontSize = 12.sp,
+                    color = TvPalette.muted,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun TvShowDetailsScreen(
     show: TvShow?,
     metadataMessage: String,
+    repository: com.vistaro.app.data.tmdb.TmdbRepository,
     onRetryMetadata: () -> Unit,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onBack: () -> Unit,
-    onSeason: (Int) -> Unit,
+    onPlayEpisode: (Int, Int) -> Unit,
     compactLayout: Boolean = false,
 ) {
     if (show == null) return TvMissingDetails("TV show", onBack)
+    var selectedSeason by rememberSaveable(show.tmdbId) { mutableIntStateOf(1) }
+    val episodes by repository.observeEpisodes(show.tmdbId).collectAsState(initial = emptyList())
+    var seasonMessage by remember(show.tmdbId, selectedSeason) { mutableStateOf("") }
+    LaunchedEffect(show.tmdbId, selectedSeason) {
+        seasonMessage = repository.refreshSeason(show.tmdbId, selectedSeason) ?: ""
+    }
+
+    val count = if (selectedSeason == show.numberOfSeasons) {
+        show.numberOfEpisodes - (selectedSeason - 1) * (show.numberOfEpisodes / show.numberOfSeasons.coerceAtLeast(1))
+    } else {
+        show.numberOfEpisodes / show.numberOfSeasons.coerceAtLeast(1)
+    }
+    val episodeItems = episodes.filter { it.seasonNumber == selectedSeason }.takeIf { it.isNotEmpty() }?.map { ep ->
+        Triple(
+            ep.episodeNumber,
+            ep.title.ifBlank { "Episode ${ep.episodeNumber}" },
+            ep.overview.ifBlank { "Episode ${ep.episodeNumber} of Season $selectedSeason." }
+        ) to ep.stillPath
+    } ?: (1..count.coerceAtLeast(1)).map { ep ->
+        Triple(
+            ep,
+            if (ep == 1) "Pilot" else "Episode $ep",
+            "Episode $ep of Season $selectedSeason."
+        ) to null
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().focusRestorer(),
         contentPadding = PaddingValues(bottom = 48.dp),
@@ -971,10 +1069,8 @@ private fun TvShowDetailsScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = if (compactLayout) 18.dp else 44.dp, vertical = 24.dp),
-                    verticalArrangement = Arrangement.SpaceBetween,
+                    verticalArrangement = Arrangement.Bottom,
                 ) {
-                    AppButton(onClick = onBack) { Text("‹  Back") }
-
                     Column(Modifier.widthIn(max = 840.dp)) {
                         Box(
                             modifier = Modifier
@@ -1026,8 +1122,8 @@ private fun TvShowDetailsScreen(
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                     modifier = Modifier.focusGroup().padding(bottom = 20.dp),
                 ) {
-                    AppButton(onClick = { onSeason(1) }, isPrimary = true) {
-                        Text("▶  Play Season 1", fontWeight = FontWeight.Bold)
+                    AppButton(onClick = { onPlayEpisode(selectedSeason, 1) }, isPrimary = true) {
+                        Text("▶  Play S$selectedSeason E1", fontWeight = FontWeight.Bold)
                     }
                     AppButton(onClick = onToggleFavorite) {
                         Text(if (isFavorite) "★  Favorited" else "☆  Add to Favorites")
@@ -1059,49 +1155,94 @@ private fun TvShowDetailsScreen(
                     }
                 }
 
-                Text(
-                    text = "Seasons",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TvPalette.text,
-                    modifier = Modifier.padding(top = 28.dp, bottom = 14.dp),
-                )
-                LazyRow(
-                    state = rememberLazyListState(initialFirstVisibleItemIndex = 0),
-                    reverseLayout = false,
-                    modifier = Modifier.fillMaxWidth().focusGroup(),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                var seasonDropdownExpanded by remember { mutableStateOf(false) }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(top = 28.dp, bottom = 12.dp),
                 ) {
-                    items((1..show.numberOfSeasons).toList()) { seasonNumber ->
+                    Text(
+                        text = "Episodes",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TvPalette.text,
+                    )
+                    Box {
                         AppClickableSurface(
-                            onClick = { onSeason(seasonNumber) },
-                            modifier = Modifier
-                                .width(160.dp)
-                                .height(95.dp),
-                            shape = RoundedCornerShape(10.dp),
+                            onClick = { seasonDropdownExpanded = true },
+                            modifier = Modifier,
+                            shape = RoundedCornerShape(8.dp),
                             containerColor = TvPalette.surface,
                             borderStroke = BorderStroke(1.dp, TvPalette.cardBorder),
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(14.dp),
-                                verticalArrangement = Arrangement.Center,
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 Text(
-                                    text = "Season $seasonNumber",
+                                    text = "Season $selectedSeason",
                                     color = TvPalette.text,
-                                    fontSize = 16.sp,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                 )
                                 Text(
-                                    text = "Browse episodes ›",
+                                    text = "▾",
                                     color = TvPalette.accent,
-                                    fontSize = 12.sp,
-                                    modifier = Modifier.padding(top = 4.dp),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
                                 )
                             }
                         }
+                        DropdownMenu(
+                            expanded = seasonDropdownExpanded,
+                            onDismissRequest = { seasonDropdownExpanded = false },
+                            modifier = Modifier
+                                .background(TvPalette.surface)
+                                .border(1.dp, TvPalette.cardBorder, RoundedCornerShape(8.dp)),
+                        ) {
+                            val totalSeasons = show.numberOfSeasons.coerceAtLeast(1)
+                            (1..totalSeasons).forEach { s ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = "Season $s",
+                                            color = if (s == selectedSeason) TvPalette.accent else Color.White,
+                                            fontWeight = if (s == selectedSeason) FontWeight.Bold else FontWeight.Normal,
+                                            fontSize = 14.sp,
+                                        )
+                                    },
+                                    onClick = {
+                                        selectedSeason = s
+                                        seasonDropdownExpanded = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                val episodeRowState = rememberLazyListState()
+                LaunchedEffect(selectedSeason, episodeItems) {
+                    episodeRowState.scrollToItem(0)
+                }
+                LazyRow(
+                    state = episodeRowState,
+                    reverseLayout = false,
+                    modifier = Modifier.fillMaxWidth().focusGroup().focusRestorer(),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    contentPadding = PaddingValues(top = 4.dp, bottom = 8.dp),
+                ) {
+                    items(episodeItems, key = { "ep-$selectedSeason-${it.first.first}" }) { (meta, stillPath) ->
+                        val (epNum, epTitle, epOverview) = meta
+                        TvEpisodeHorizontalCard(
+                            episodeNumber = epNum,
+                            title = epTitle,
+                            overview = epOverview,
+                            stillPath = stillPath,
+                            compactLayout = compactLayout,
+                            onClick = { onPlayEpisode(selectedSeason, epNum) },
+                        )
                     }
                 }
             }
@@ -1233,12 +1374,60 @@ private fun TvSeasonScreen(
 }
 
 @Composable
-private fun TvFavoritesScreen(movies: List<Movie>, shows: List<TvShow>, favoriteKeys: Set<String>, onItem: (CatalogItem) -> Unit) {
-    val items = buildList {
-        movies.filter { "MOVIE:${it.tmdbId}" in favoriteKeys }.forEach { add(it.toCatalogItem()) }
-        shows.filter { "TV_SHOW:${it.tmdbId}" in favoriteKeys }.forEach { add(it.toCatalogItem()) }
+private fun TvFavoritesScreen(
+    movies: List<Movie>,
+    shows: List<TvShow>,
+    favoriteKeys: Set<String>,
+    onItem: (CatalogItem) -> Unit,
+    compactLayout: Boolean = false,
+) {
+    val items = remember(movies, shows, favoriteKeys) {
+        buildList {
+            movies.filter { "MOVIE:${it.tmdbId}" in favoriteKeys }.forEach { add(it.toCatalogItem()) }
+            shows.filter { "TV_SHOW:${it.tmdbId}" in favoriteKeys }.forEach { add(it.toCatalogItem()) }
+        }
     }
-    TvCollectionScreen("Favorites", "Your saved movies and shows", items, emptyMessage = "No favorites yet. Add one from a details screen.", onItem = onItem)
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(horizontal = if (compactLayout) 16.dp else 40.dp, vertical = 20.dp)
+    ) {
+        Text(
+            text = "Favorites",
+            fontSize = if (compactLayout) 26.sp else 34.sp,
+            fontWeight = FontWeight.Bold,
+            color = TvPalette.text,
+        )
+        Text(
+            text = "Your saved movies and shows",
+            modifier = Modifier.padding(top = 4.dp, bottom = 18.dp),
+            color = TvPalette.muted,
+            fontSize = 16.sp,
+        )
+        if (items.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(TvPalette.surface)
+                    .padding(24.dp)
+            ) {
+                Text("No favorites yet. Add one from a details screen.", fontSize = 16.sp, color = TvPalette.muted)
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(if (compactLayout) 140.dp else 190.dp),
+                modifier = Modifier.weight(1f).focusRestorer(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(bottom = 36.dp),
+            ) {
+                items(items, key = { "${it.type}:${it.tmdbId}" }) { item ->
+                    TvMediaTile(item, onClick = { onItem(item) })
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -1255,10 +1444,14 @@ private fun TvContinueWatchingScreen(items: List<ContinueWatchingItem>, onResume
 
 @Composable
 private fun TvContinueRow(onResume: () -> Unit) {
+    val continueRowState = rememberLazyListState()
+    LaunchedEffect(Unit) {
+        continueRowState.scrollToItem(0)
+    }
     Column {
         Text("Continue Watching", modifier = Modifier.padding(bottom = 10.dp), fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
         LazyRow(
-            state = rememberLazyListState(initialFirstVisibleItemIndex = 0),
+            state = continueRowState,
             reverseLayout = false,
             modifier = Modifier.fillMaxWidth().focusGroup().focusRestorer(),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -1267,6 +1460,7 @@ private fun TvContinueRow(onResume: () -> Unit) {
                 TvSurface(
                     onClick = onResume,
                     modifier = Modifier.width(235.dp).height(142.dp),
+                    scale = androidx.tv.material3.ClickableSurfaceDefaults.scale(1f, 1f, 1f, 1f, 1f),
                     shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
                     colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(containerColor = TvPalette.surface, focusedContainerColor = TvPalette.surfaceFocused),
                     border = androidx.tv.material3.ClickableSurfaceDefaults.border(
@@ -1302,6 +1496,7 @@ private fun TvCollectionScreen(title: String, subtitle: String, items: List<Cata
                 TvSurface(
                     onClick = {},
                     modifier = Modifier.fillMaxWidth(),
+                    scale = androidx.tv.material3.ClickableSurfaceDefaults.scale(1f, 1f, 1f, 1f, 1f),
                     colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(containerColor = TvPalette.surface),
                 ) { Text(emptyMessage, modifier = Modifier.padding(24.dp), fontSize = 18.sp) }
             }
@@ -1319,15 +1514,9 @@ private fun TvSettingsScreen(tmdbConfigured: Boolean, catalogSyncManager: com.vi
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item { Text("Settings", modifier = Modifier.padding(bottom = 12.dp), fontSize = 34.sp, fontWeight = FontWeight.Bold) }
-        item { TvSettingSection("GENERAL") }
+        item { TvSettingSection("CATALOG SYNC") }
         item { CatalogSyncStatus(catalogSyncManager, isTv = true, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) }
-        item { TvSettingRow("Clear Catalog Cache", "Remove locally cached catalog data") }
-        item { TvActionRow("Favorites", "Open saved movies and TV shows", onFavorites) }
-        item { TvSettingSection("PLAYBACK") }
-        item { TvSettingRow("Preferred Quality", "Default") }
-        item { TvSettingRow("Autoplay", "On") }
         item { TvSettingSection("ABOUT") }
-        item { TvSettingRow("TMDB Metadata", if (tmdbConfigured) "Access token configured" else "Add TMDB_ACCESS_TOKEN to secrets.properties") }
         item { Text("This product uses the TMDB API but is not endorsed or certified by TMDB.", modifier = Modifier.padding(top = 8.dp), color = TvPalette.muted, fontSize = 14.sp) }
     }
 }

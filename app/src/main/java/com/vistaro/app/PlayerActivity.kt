@@ -6,6 +6,7 @@ import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -201,6 +202,132 @@ class PlayerActivity : Activity() {
         super.onResume()
         if (::webView.isInitialized) webView.onResume()
         hideSystemBars()
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER,
+                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                    togglePlayPause()
+                    return true
+                }
+                KeyEvent.KEYCODE_MEDIA_PLAY -> {
+                    playVideo()
+                    return true
+                }
+                KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+                    pauseVideo()
+                    return true
+                }
+            }
+        } else if (event.action == KeyEvent.ACTION_UP) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER,
+                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+                KeyEvent.KEYCODE_MEDIA_PLAY,
+                KeyEvent.KEYCODE_MEDIA_PAUSE -> return true
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    private fun togglePlayPause() {
+        val js = """
+            (function() {
+                function tryToggle(win) {
+                    try {
+                        var v = win.document.querySelector('video');
+                        if (v) {
+                            if (v.paused) { v.play(); } else { v.pause(); }
+                            return true;
+                        }
+                    } catch(e) {}
+                    try {
+                        var frames = win.document.querySelectorAll('iframe');
+                        for (var i = 0; i < frames.length; i++) {
+                            try {
+                                if (tryToggle(frames[i].contentWindow)) return true;
+                            } catch(e) {}
+                        }
+                    } catch(e) {}
+                    return false;
+                }
+                var toggled = tryToggle(window);
+                if (!toggled) {
+                    var el = document.activeElement || document.body;
+                    el.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true }));
+                    el.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true }));
+                    var btn = document.querySelector('.play, .vjs-play-control, [aria-label*="Play" i], [aria-label*="Pause" i], button[class*="play" i]');
+                    if (btn) btn.click();
+                }
+            })();
+        """.trimIndent()
+        if (::webView.isInitialized) {
+            webView.evaluateJavascript(js, null)
+            webView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_SPACE))
+            webView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_SPACE))
+        }
+    }
+
+    private fun playVideo() {
+        val js = """
+            (function() {
+                function tryPlay(win) {
+                    try {
+                        var v = win.document.querySelector('video');
+                        if (v) { v.play(); return true; }
+                    } catch(e) {}
+                    try {
+                        var frames = win.document.querySelectorAll('iframe');
+                        for (var i = 0; i < frames.length; i++) {
+                            try { if (tryPlay(frames[i].contentWindow)) return true; } catch(e) {}
+                        }
+                    } catch(e) {}
+                    return false;
+                }
+                var handled = tryPlay(window);
+                if (!handled) {
+                    var btn = document.querySelector('[aria-label*="Play" i], button[class*="play" i]');
+                    if (btn) btn.click();
+                }
+            })();
+        """.trimIndent()
+        if (::webView.isInitialized) {
+            webView.evaluateJavascript(js, null)
+        }
+    }
+
+    private fun pauseVideo() {
+        val js = """
+            (function() {
+                function tryPause(win) {
+                    try {
+                        var v = win.document.querySelector('video');
+                        if (v) { v.pause(); return true; }
+                    } catch(e) {}
+                    try {
+                        var frames = win.document.querySelectorAll('iframe');
+                        for (var i = 0; i < frames.length; i++) {
+                            try { if (tryPause(frames[i].contentWindow)) return true; } catch(e) {}
+                        }
+                    } catch(e) {}
+                    return false;
+                }
+                var handled = tryPause(window);
+                if (!handled) {
+                    var btn = document.querySelector('[aria-label*="Pause" i], button[class*="pause" i]');
+                    if (btn) btn.click();
+                }
+            })();
+        """.trimIndent()
+        if (::webView.isInitialized) {
+            webView.evaluateJavascript(js, null)
+        }
     }
 
     override fun onBackPressed() {

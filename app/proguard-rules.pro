@@ -25,16 +25,4 @@
     @retrofit2.http.* <methods>;
 }
 
-# MongoDB & BSON
--dontwarn com.mongodb.**
--dontwarn org.bson.**
--dontwarn org.ietf.jgss.**
--dontwarn io.netty.**
--dontwarn org.xerial.snappy.**
--dontwarn com.github.luben.zstd.**
--dontwarn io.micrometer.**
--dontwarn org.slf4j.**
--dontwarn reactor.**
--keepattributes EnclosingMethod
--keep class com.mongodb.** { *; }
--keep class org.bson.** { *; }
+

@@ -6,12 +6,7 @@ import com.vistaro.app.core.model.MediaType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-import com.vistaro.app.data.mongo.MongoUserRepository
-
-class WatchProgressRepository(
-    private val database: CatalogDatabase,
-    private val mongoUserRepository: MongoUserRepository? = null,
-) {
+class WatchProgressRepository(private val database: CatalogDatabase) {
     fun observeInProgress(limit: Int = 10): Flow<List<WatchProgressEntity>> =
         database.watchProgressDao().observeInProgress(limit * 4).map { rows ->
             rows.distinctBy { "${it.contentType}:${it.contentId}" }.take(limit)
@@ -41,7 +36,6 @@ class WatchProgressRepository(
             completed = completed,
         )
         database.watchProgressDao().upsert(entity)
-        mongoUserRepository?.saveWatchProgress(progress = entity)
     }
 
     suspend fun clear() = database.watchProgressDao().clear()

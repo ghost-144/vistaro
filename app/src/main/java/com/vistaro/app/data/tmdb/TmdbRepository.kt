@@ -1,5 +1,6 @@
 package com.vistaro.app.data.tmdb
 
+import android.util.Log
 import com.vistaro.app.core.database.CatalogDatabase
 import com.vistaro.app.core.database.CatalogMetadataEntity
 import com.vistaro.app.core.database.EpisodeEntity
@@ -22,12 +23,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-import com.vistaro.app.data.mongo.MongoCatalogRepository
-
 class TmdbRepository(
     private val apiFactory: TmdbApiFactory,
     private val database: CatalogDatabase,
-    private val mongoCatalogRepository: MongoCatalogRepository? = null,
 ) {
     private val api: TmdbApi by lazy(apiFactory::create)
     private var lastPopularRefreshAt = 0L
@@ -106,10 +104,6 @@ class TmdbRepository(
             database.withTransaction {
                 database.tvShowDao().upsertAll(listOf(show.toEntity()))
                 database.episodeDao().upsertAll(episodeEntities)
-            }
-            mongoCatalogRepository?.let { mongo ->
-                mongo.saveTvShow(show.toEntity())
-                mongo.saveSeasonEpisodes(showTmdbId, seasonNumber, episodeEntities)
             }
             null
         } catch (error: Exception) {
@@ -265,15 +259,14 @@ class TmdbRepository(
         }
     }
 
-
     suspend fun searchAvailable(query: String, page: Int): CatalogPage {
         val normalizedQuery = query.trim()
         if (normalizedQuery.isBlank()) return CatalogPage(emptyList(), 1, 1)
         if (!isConfigured) return CatalogPage(emptyList(), page, page, "Add TMDB_ACCESS_TOKEN to secrets.properties to search online.")
         if (page !in 1..MAX_SEARCH_PAGES) return CatalogPage(emptyList(), page, page)
 
+        val startTime = System.currentTimeMillis()
         val snapshotId = database.catalogMetadataDao().get(ID_SNAPSHOT_KEY)?.value?.toLongOrNull()
-            ?: return CatalogPage(emptyList(), page, page, "Sync the VidAPI catalog in Settings before searching. The latest completed ID list is required.")
 
         return try {
             val (movieResponse, showResponse) = coroutineScope {
@@ -284,32 +277,34 @@ class TmdbRepository(
             val now = System.currentTimeMillis()
             val movieModels = movieResponse.results.filter { it.id > 0 && it.title.isNotBlank() }.map { it.toModel(now) }
             val showModels = showResponse.results.filter { it.id > 0 && it.name.isNotBlank() }.map { it.toModel(now) }
-            val availability = database.catalogAvailabilityDao()
-            val movieIds = if (movieModels.isEmpty()) emptySet() else availability.idsInSnapshot("MOVIE", snapshotId, movieModels.map { it.tmdbId }).toSet()
-            val showIds = if (showModels.isEmpty()) emptySet() else availability.idsInSnapshot("TV_SHOW", snapshotId, showModels.map { it.tmdbId }).toSet()
-            val movies = movieModels.filter { it.tmdbId in movieIds }
-            val shows = showModels.filter { it.tmdbId in showIds }
+
+            val (movies, shows) = if (snapshotId != null) {
+                val availability = database.catalogAvailabilityDao()
+                val movieIds = if (movieModels.isEmpty()) emptySet() else availability.idsInSnapshot("MOVIE", snapshotId, movieModels.map { it.tmdbId }).toSet()
+                val showIds = if (showModels.isEmpty()) emptySet() else availability.idsInSnapshot("TV_SHOW", snapshotId, showModels.map { it.tmdbId }).toSet()
+                (movieModels.filter { it.tmdbId in movieIds }) to (showModels.filter { it.tmdbId in showIds })
+            } else {
+                movieModels to showModels
+            }
+
             database.withTransaction {
                 if (movies.isNotEmpty()) database.movieDao().upsertAll(movies.map { it.toEntity() })
                 if (shows.isNotEmpty()) database.tvShowDao().upsertAll(shows.map { it.toEntity() })
             }
-            mongoCatalogRepository?.let { mongo ->
-                movies.forEach { mongo.saveMovie(it.toEntity()) }
-                shows.forEach { mongo.saveTvShow(it.toEntity()) }
-            }
             val items = (movies.map { CatalogItem(it.tmdbId, MediaType.MOVIE, it.title, it.releaseDate?.take(4), it.posterPath, it.rating) } +
                 shows.map { CatalogItem(it.tmdbId, MediaType.TV_SHOW, it.title, it.firstAirDate?.take(4), it.posterPath, it.rating) })
                 .take(MAX_SEARCH_RESULTS_PER_PAGE)
+
+            val duration = System.currentTimeMillis() - startTime
+            Log.i(TAG, "TMDB search for '$normalizedQuery' (page $page) returned ${items.size} items in ${duration}ms")
+
             CatalogPage(items, page, minOf(maxOf(movieResponse.totalPages, showResponse.totalPages), MAX_SEARCH_PAGES))
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            val mongoFallback = mongoCatalogRepository?.searchOnline(normalizedQuery, MAX_SEARCH_RESULTS_PER_PAGE).orEmpty()
-            if (mongoFallback.isNotEmpty()) {
-                CatalogPage(mongoFallback, page, 1)
-            } else {
-                CatalogPage(emptyList(), page, page, error.userMessage())
-            }
+            val duration = System.currentTimeMillis() - startTime
+            Log.e(TAG, "TMDB search for '$normalizedQuery' failed after ${duration}ms: ${error.message}", error)
+            CatalogPage(emptyList(), page, page, error.userMessage())
         }
     }
 
@@ -365,6 +360,7 @@ class TmdbRepository(
     )
 
     companion object {
+        private const val TAG = "TmdbRepository"
         private const val POPULAR_REFRESH_COOLDOWN_MS = 6 * 60 * 60 * 1000L
         private const val ID_SNAPSHOT_KEY = "vidapi_catalog_id_snapshot"
         private const val MAX_SEARCH_PAGES = 3

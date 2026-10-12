@@ -8,6 +8,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,5 +26,14 @@ private fun VistaroNavigation(container: AppContainer) {
     val isTv = remember(context) {
         context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
     }
-    TvAppNavigation(container, useBottomNavigation = !isTv)
+    val currentDensity = LocalDensity.current
+    val scaledDensity = remember(currentDensity) {
+        Density(
+            density = currentDensity.density * 0.8f,
+            fontScale = currentDensity.fontScale * 0.8f,
+        )
+    }
+    CompositionLocalProvider(LocalDensity provides scaledDensity) {
+        TvAppNavigation(container, useBottomNavigation = !isTv)
+    }
 }
